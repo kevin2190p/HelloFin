@@ -1,0 +1,55 @@
+{
+  "name": "HelloFin – WhatsApp Webhook Verification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Verification Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [200, 340],
+      "webhookId": "hellofin-wa-verify"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Meta sends: hub.mode, hub.challenge, hub.verify_token\nconst query = $input.first().json.query || $input.first().json;\nconst mode = query['hub.mode'];\nconst token = query['hub.verify_token'];\nconst challenge = query['hub.challenge'];\n\n// IMPORTANT: Change this to match your WHATSAPP_VERIFY_TOKEN in .env\nconst VERIFY_TOKEN = 'hellofin-webhook-verify-2026';\n\nif (mode === 'subscribe' && token === VERIFY_TOKEN) {\n  return [{ json: { challenge, verified: true } }];\n}\n\nreturn [{ json: { challenge: '', verified: false, error: 'Token mismatch' } }];"
+      },
+      "id": "b1b2c3d4-0001-4000-8000-000000000002",
+      "name": "Validate Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 340]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.challenge }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "b1b2c3d4-0001-4000-8000-000000000003",
+      "name": "Return Challenge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [640, 340]
+    }
+  ],
+  "connections": {
+    "Verification Webhook": {
+      "main": [[{ "node": "Validate Token", "type": "main", "index": 0 }]]
+    },
+    "Validate Token": {
+      "main": [[{ "node": "Return Challenge", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "FINHACK2026" }, { "name": "KV" }]
+}
