@@ -1,0 +1,434 @@
+<script>
+  import { onMount, onDestroy } from 'svelte';
+  import { startPolling, handleApprove, handleCancel, formatTime, riskColor } from './lib/caregiverDashboard.js';
+  import { healthCheck } from './lib/api.js';
+
+  let alerts = [];
+  let error = null;
+  let stopPolling;
+  let backendOnline = false;
+  let now = Date.now();
+  let actionLoading = {};
+  let actionResult = {};
+
+  // Tick every second for countdown timers
+  let ticker;
+
+  onMount(() => {
+    stopPolling = startPolling((data, err) => {
+      alerts = data;
+      error = err;
+    });
+    ticker = setInterval(() => { now = Date.now(); }, 1000);
+    healthCheck().then(() => backendOnline = true).catch(() => backendOnline = false);
+  });
+
+  onDestroy(() => {
+    if (stopPolling) stopPolling();
+    if (ticker) clearInterval(ticker);
+  });
+
+  function countdown(ts) {
+    if (!ts) return '—';
+    const expire = (ts + 600) * 1000;
+    const diff = Math.max(0, Math.floor((expire - now) / 1000));
+    const m = Math.floor(diff / 60);
+    const s = diff % 60;
+    return diff <= 0 ? 'EXPIRED' : `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  async function onApprove(txnId) {
+    actionLoading[txnId] = 'approve';
+    try {
+      const res = await handleApprove(txnId);
+      actionResult[txnId] = { type: 'success', msg: res.message };
+    } catch (e) {
+      actionResult[txnId] = { type: 'error', msg: e.message };
+    }
+    actionLoading[txnId] = null;
+  }
+
+  async function onCancel(txnId) {
+    actionLoading[txnId] = 'cancel';
+    try {
+      const res = await handleCancel(txnId);
+      actionResult[txnId] = { type: 'success', msg: res.message };
+    } catch (e) {
+      actionResult[txnId] = { type: 'error', msg: e.message };
+    }
+    actionLoading[txnId] = null;
+  }
+
+  $: pendingAlerts = alerts.filter(a => a.status === 'held' || a.status === 'pending');
+  $: resolvedAlerts = alerts.filter(a => a.status === 'approved' || a.status === 'cancelled');
+</script>
+
+<main>
+  <!-- ─── Animated Background ─── -->
+  <div class="bg-grid"></div>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <!-- ─── Header ─── -->
+  <header>
+    <div class="header-inner">
+      <div class="logo-group">
+        <div class="logo-icon">
+          <svg viewBox="0 0 40 40" fill="none">
+            <circle cx="20" cy="20" r="18" stroke="url(#g1)" stroke-width="2.5"/>
+            <path d="M14 20 L18 24 L26 16" stroke="url(#g1)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs><linearGradient id="g1" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#6EE7B7"/><stop offset="1" stop-color="#3B82F6"/></linearGradient></defs>
+          </svg>
+        </div>
+        <div>
+          <h1>HelloFin<span class="accent">Shield</span></h1>
+          <p class="subtitle">Voice Phishing Detection • Caregiver Dashboard</p>
+        </div>
+      </div>
+      <div class="status-group">
+        <div class="status-badge" class:online={backendOnline} class:offline={!backendOnline}>
+          <span class="dot"></span>
+          {backendOnline ? 'System Online' : 'Connecting...'}
+        </div>
+        <div class="live-badge">
+          <span class="pulse-dot"></span>
+          LIVE
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── Stats Bar ─── -->
+  <section class="stats-bar">
+    <div class="stat-card">
+      <span class="stat-value">{alerts.length}</span>
+      <span class="stat-label">Total Alerts</span>
+    </div>
+    <div class="stat-card critical-bg">
+      <span class="stat-value">{pendingAlerts.length}</span>
+      <span class="stat-label">Pending Review</span>
+    </div>
+    <div class="stat-card safe-bg">
+      <span class="stat-value">{resolvedAlerts.length}</span>
+      <span class="stat-label">Resolved</span>
+    </div>
+  </section>
+
+  <!-- ─── Error Banner ─── -->
+  {#if error}
+    <div class="error-banner">
+      <span>⚠️ {error}</span>
+      <span class="error-sub">Auto-retrying every 15s…</span>
+    </div>
+  {/if}
+
+  <!-- ─── Pending Alerts ─── -->
+  <section class="alerts-section">
+    <h2 class="section-title">
+      <span class="icon-shield">🛡️</span>
+      Pending Alerts
+      {#if pendingAlerts.length > 0}
+        <span class="badge-count">{pendingAlerts.length}</span>
+      {/if}
+    </h2>
+
+    {#if pendingAlerts.length === 0}
+      <div class="empty-state">
+        <div class="empty-icon">✅</div>
+        <p>No pending alerts. All transactions are clear.</p>
+      </div>
+    {:else}
+      <div class="alerts-grid">
+        {#each pendingAlerts as alert (alert.txn_id)}
+          <div class="alert-card" class:critical={alert.risk_score >= 80} class:warning={alert.risk_score >= 50 && alert.risk_score < 80}>
+            <!-- Risk Score Ring -->
+            <div class="risk-ring-wrap">
+              <svg class="risk-ring" viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="34" class="ring-bg"/>
+                <circle cx="40" cy="40" r="34" class="ring-fill {riskColor(alert.risk_score)}"
+                  style="stroke-dasharray: {(alert.risk_score / 100) * 213.6} 213.6"/>
+              </svg>
+              <span class="ring-text">{alert.risk_score}</span>
+            </div>
+
+            <!-- Alert Details -->
+            <div class="alert-details">
+              <div class="alert-header">
+                <span class="risk-tag {riskColor(alert.risk_score)}">
+                  {alert.risk_score >= 80 ? '🔴 CRITICAL' : '🟡 WARNING'}
+                </span>
+                <span class="timer" class:expired={countdown(alert.timestamp) === 'EXPIRED'}>
+                  ⏱ {countdown(alert.timestamp)}
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Transaction</span>
+                <span class="value mono">{alert.txn_id.slice(0, 8)}…</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Sender</span>
+                <span class="value">{alert.sender_phone}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Amount</span>
+                <span class="value amount">RM {alert.transaction_amount.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Reason</span>
+                <span class="value reason">{alert.reason || 'Voice phishing pattern detected'}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Time</span>
+                <span class="value">{formatTime(alert.timestamp)}</span>
+              </div>
+
+              {#if actionResult[alert.txn_id]}
+                <div class="action-result {actionResult[alert.txn_id].type}">
+                  {actionResult[alert.txn_id].msg}
+                </div>
+              {/if}
+
+              <div class="action-buttons">
+                <button class="btn btn-cancel" disabled={!!actionLoading[alert.txn_id]}
+                  on:click={() => onCancel(alert.txn_id)}>
+                  {actionLoading[alert.txn_id] === 'cancel' ? '⏳ Cancelling…' : '🚫 Block & Cancel'}
+                </button>
+                <button class="btn btn-approve" disabled={!!actionLoading[alert.txn_id]}
+                  on:click={() => onApprove(alert.txn_id)}>
+                  {actionLoading[alert.txn_id] === 'approve' ? '⏳ Approving…' : '✅ Approve'}
+                </button>
+              </div>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </section>
+
+  <!-- ─── Resolved ─── -->
+  {#if resolvedAlerts.length > 0}
+    <section class="alerts-section resolved-section">
+      <h2 class="section-title"><span class="icon-shield">📋</span> Resolved</h2>
+      <div class="resolved-list">
+        {#each resolvedAlerts as alert (alert.txn_id)}
+          <div class="resolved-row">
+            <span class="resolved-status {alert.status}">{alert.status === 'approved' ? '✅' : '🚫'} {alert.status}</span>
+            <span class="mono">{alert.txn_id.slice(0, 8)}…</span>
+            <span>Score: {alert.risk_score}</span>
+            <span>RM {alert.transaction_amount.toFixed(2)}</span>
+            <span>{formatTime(alert.timestamp)}</span>
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
+
+  <footer>
+    <p>HelloFin Shield v1.0 • TNG Digital FINHACK 2026 • Bank-Grade Voice Phishing Detection</p>
+  </footer>
+</main>
+
+<style>
+  /* ═══════════════════════════════════════════════
+     DESIGN SYSTEM – HelloFin Shield Dashboard
+     ═══════════════════════════════════════════════ */
+  :global(*) { margin: 0; padding: 0; box-sizing: border-box; }
+  :global(body) {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0a0e1a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Animated BG ── */
+  .bg-grid {
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(99,102,241,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(99,102,241,.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+  .bg-glow {
+    position: fixed; border-radius: 50%; filter: blur(120px); z-index: 0; pointer-events: none;
+  }
+  .glow-1 { width: 500px; height: 500px; top: -100px; right: -100px; background: rgba(59,130,246,.12); animation: drift 20s ease-in-out infinite; }
+  .glow-2 { width: 400px; height: 400px; bottom: -80px; left: -80px; background: rgba(16,185,129,.1); animation: drift 25s ease-in-out infinite reverse; }
+  @keyframes drift { 0%,100%{transform:translate(0,0)} 50%{transform:translate(40px,30px)} }
+
+  main { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
+
+  /* ── Header ── */
+  header {
+    padding: 24px 0;
+    border-bottom: 1px solid rgba(99,102,241,.15);
+    margin-bottom: 32px;
+  }
+  .header-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+  .logo-group { display: flex; align-items: center; gap: 14px; }
+  .logo-icon svg { width: 44px; height: 44px; }
+  h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -.02em; color: #f1f5f9; }
+  .accent { background: linear-gradient(135deg, #6EE7B7, #3B82F6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .subtitle { font-size: .8rem; color: #64748b; margin-top: 2px; letter-spacing: .03em; }
+  .status-group { display: flex; align-items: center; gap: 12px; }
+  .status-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 20px; font-size: .78rem; font-weight: 600;
+    background: rgba(30,41,59,.7); border: 1px solid rgba(99,102,241,.2);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .online .dot { background: #34d399; box-shadow: 0 0 8px #34d399; }
+  .offline .dot { background: #f87171; }
+  .live-badge {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 20px; font-size: .7rem; font-weight: 700;
+    background: rgba(239,68,68,.15); color: #f87171; border: 1px solid rgba(239,68,68,.3);
+    letter-spacing: .08em;
+  }
+  .pulse-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: #ef4444;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.8)} }
+
+  /* ── Stats Bar ── */
+  .stats-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+  .stat-card {
+    background: rgba(30,41,59,.6); border: 1px solid rgba(99,102,241,.12);
+    border-radius: 16px; padding: 20px 24px; text-align: center;
+    backdrop-filter: blur(12px);
+    transition: transform .2s, border-color .2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); border-color: rgba(99,102,241,.3); }
+  .critical-bg { border-color: rgba(239,68,68,.25); background: rgba(239,68,68,.06); }
+  .safe-bg { border-color: rgba(52,211,153,.25); background: rgba(52,211,153,.06); }
+  .stat-value { display: block; font-size: 2.2rem; font-weight: 800; }
+  .critical-bg .stat-value { color: #f87171; }
+  .safe-bg .stat-value { color: #34d399; }
+  .stat-label { font-size: .78rem; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; }
+
+  /* ── Section ── */
+  .section-title {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; color: #f1f5f9;
+  }
+  .badge-count {
+    background: rgba(239,68,68,.2); color: #f87171; font-size: .75rem;
+    padding: 2px 10px; border-radius: 12px; font-weight: 700;
+  }
+
+  /* ── Error ── */
+  .error-banner {
+    background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);
+    border-radius: 12px; padding: 14px 20px; margin-bottom: 24px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .error-sub { font-size: .75rem; color: #94a3b8; }
+
+  /* ── Empty ── */
+  .empty-state {
+    text-align: center; padding: 60px 20px;
+    background: rgba(30,41,59,.4); border-radius: 20px;
+    border: 1px dashed rgba(99,102,241,.2);
+  }
+  .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+
+  /* ── Alerts Grid ── */
+  .alerts-grid { display: grid; gap: 20px; }
+  .alert-card {
+    display: flex; gap: 24px; align-items: flex-start;
+    background: rgba(30,41,59,.65); border: 1px solid rgba(99,102,241,.12);
+    border-radius: 20px; padding: 28px;
+    backdrop-filter: blur(16px);
+    transition: transform .25s, box-shadow .25s;
+    animation: slideIn .4s ease-out;
+  }
+  .alert-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,.3); }
+  .alert-card.critical { border-color: rgba(239,68,68,.3); background: rgba(239,68,68,.04); }
+  .alert-card.warning { border-color: rgba(251,191,36,.3); background: rgba(251,191,36,.04); }
+  @keyframes slideIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  /* ── Risk Ring ── */
+  .risk-ring-wrap { position: relative; flex-shrink: 0; width: 80px; height: 80px; }
+  .risk-ring { width: 80px; height: 80px; transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: rgba(99,102,241,.1); stroke-width: 6; }
+  .ring-fill { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dasharray .8s ease; }
+  .ring-fill.critical { stroke: #ef4444; }
+  .ring-fill.warning { stroke: #fbbf24; }
+  .ring-fill.safe { stroke: #34d399; }
+  .ring-text {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: 800;
+  }
+
+  /* ── Alert Details ── */
+  .alert-details { flex: 1; min-width: 0; }
+  .alert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+  .risk-tag {
+    padding: 4px 12px; border-radius: 8px; font-size: .72rem; font-weight: 700;
+    letter-spacing: .04em; text-transform: uppercase;
+  }
+  .risk-tag.critical { background: rgba(239,68,68,.15); color: #f87171; }
+  .risk-tag.warning { background: rgba(251,191,36,.15); color: #fbbf24; }
+  .timer { font-size: .85rem; font-weight: 600; font-variant-numeric: tabular-nums; color: #94a3b8; }
+  .timer.expired { color: #f87171; animation: pulse 1s infinite; }
+  .detail-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(99,102,241,.06); font-size: .85rem; }
+  .label { color: #64748b; font-weight: 500; }
+  .value { color: #cbd5e1; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: .8rem; }
+  .amount { color: #fbbf24; font-weight: 700; }
+  .reason { font-size: .78rem; color: #f87171; max-width: 300px; text-align: right; }
+
+  /* ── Action Buttons ── */
+  .action-buttons { display: flex; gap: 10px; margin-top: 16px; }
+  .btn {
+    flex: 1; padding: 10px 16px; border: none; border-radius: 12px;
+    font-size: .82rem; font-weight: 700; cursor: pointer;
+    transition: all .2s; letter-spacing: .02em;
+  }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-cancel {
+    background: rgba(239,68,68,.12); color: #f87171; border: 1px solid rgba(239,68,68,.3);
+  }
+  .btn-cancel:hover:not(:disabled) { background: rgba(239,68,68,.25); transform: translateY(-1px); }
+  .btn-approve {
+    background: rgba(52,211,153,.12); color: #34d399; border: 1px solid rgba(52,211,153,.3);
+  }
+  .btn-approve:hover:not(:disabled) { background: rgba(52,211,153,.25); transform: translateY(-1px); }
+
+  .action-result {
+    margin-top: 10px; padding: 8px 14px; border-radius: 8px; font-size: .78rem; font-weight: 500;
+  }
+  .action-result.success { background: rgba(52,211,153,.1); color: #34d399; }
+  .action-result.error { background: rgba(239,68,68,.1); color: #f87171; }
+
+  /* ── Resolved ── */
+  .resolved-section { margin-top: 40px; opacity: .8; }
+  .resolved-list { display: flex; flex-direction: column; gap: 8px; }
+  .resolved-row {
+    display: flex; align-items: center; gap: 20px;
+    padding: 12px 20px; border-radius: 12px;
+    background: rgba(30,41,59,.4); font-size: .82rem;
+    border: 1px solid rgba(99,102,241,.08);
+  }
+  .resolved-status { font-weight: 700; text-transform: uppercase; font-size: .72rem; min-width: 100px; }
+  .resolved-status.approved { color: #34d399; }
+  .resolved-status.cancelled { color: #f87171; }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center; padding: 40px 0 20px;
+    color: #475569; font-size: .75rem; letter-spacing: .04em;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .stats-bar { grid-template-columns: 1fr; }
+    .alert-card { flex-direction: column; align-items: center; text-align: center; }
+    .alert-header { justify-content: center; }
+    .detail-row { flex-direction: column; gap: 2px; }
+    .reason { max-width: 100%; text-align: center; }
+    .action-buttons { flex-direction: column; }
+    h1 { font-size: 1.3rem; }
+  }
+</style>

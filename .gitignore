@@ -1,0 +1,73 @@
+# ============================================================
+# HelloFin .gitignore
+# ============================================================
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/build/
+.svelte-kit/
+
+# Audio files (sensitive voice data)
+audios/
+*.ogg
+*.opus
+*.mp3
+*.wav
+*.m4a
+
+# Logs
+logs/
+*.log
+
+# Docker
+docker-compose.override.yml
+
+# n8n data
+n8n-data/
+
+# Redis
+dump.rdb
+
+# PostgreSQL
+pgdata/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# WhatsApp auth
+auth_info_baileys/
+
+# HuggingFace cache
+.hf_cache/
+
+# Misc
+media_staging/
+*.bak
+*.tmp
