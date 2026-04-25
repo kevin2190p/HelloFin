@@ -42,7 +42,7 @@ type Alert = {
 
 const initialAlerts: Alert[] = [
   {
-    id: "scamsense-demo-001",
+    id: "fakeout-demo-001",
     timestamp: new Date(Date.now() - 3 * 60_000).toISOString(),
     riskScore: 94,
     riskLevel: "Critical",
@@ -51,7 +51,7 @@ const initialAlerts: Alert[] = [
     alibabaStatus: "ok"
   },
   {
-    id: "scamsense-demo-002",
+    id: "fakeout-demo-002",
     timestamp: new Date(Date.now() - 14 * 60_000).toISOString(),
     riskScore: 72,
     riskLevel: "Warning",
@@ -60,7 +60,7 @@ const initialAlerts: Alert[] = [
     alibabaStatus: "ok"
   },
   {
-    id: "scamsense-demo-003",
+    id: "fakeout-demo-003",
     timestamp: new Date(Date.now() - 38 * 60_000).toISOString(),
     riskScore: 41,
     riskLevel: "Suspicious",
@@ -121,9 +121,9 @@ export default function DashboardPage() {
               <span className="w-1.5 h-1.5 rounded-full bg-safe animate-pulse" />
               Live · multi-cloud
             </div>
-            <h1 className="heading-lg">ScamSense Fraud Intelligence Console</h1>
+            <h1 className="heading-lg">Fakeout Fraud Intelligence Console</h1>
             <p className="text-zinc-400 text-sm mt-1">
-              Real-time risk events from on-device ScamSense clients
+              Real-time risk events from on-device Fakeout clients
             </p>
           </div>
           <div className="flex gap-2">

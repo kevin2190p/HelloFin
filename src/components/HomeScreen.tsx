@@ -55,7 +55,7 @@ export default function HomeScreen({
             <ShieldCheck className="w-5 h-5 text-white" strokeWidth={2.5} />
           </div>
           <div>
-            <div className="text-[15px] font-bold tracking-tight">ScamSense</div>
+            <div className="text-[15px] font-bold tracking-tight">Fakeout</div>
             <div className="text-[10px] text-zinc-500 font-medium">Private AI Protection</div>
           </div>
         </div>

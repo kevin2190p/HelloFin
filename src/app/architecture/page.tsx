@@ -32,7 +32,7 @@ export default function ArchitecturePage() {
               <span className="w-1.5 h-1.5 rounded-full bg-premium animate-pulse" />
               System architecture
             </div>
-            <h1 className="heading-lg">ScamSense Multi-Cloud Architecture</h1>
+            <h1 className="heading-lg">Fakeout Multi-Cloud Architecture</h1>
             <p className="text-zinc-400 text-sm mt-1">
               On-device AI inference + privacy-preserving multi-cloud risk pipeline
             </p>
@@ -87,7 +87,7 @@ export default function ArchitecturePage() {
             title="Alibaba Cloud · ap-southeast-3"
             icon={<Database className="w-5 h-5" strokeWidth={2.5} />}
             chips={[
-              { icon: Database, label: "OSS bucket: scamsense-demo-risk-events" },
+              { icon: Database, label: "OSS bucket: fakeout-demo-risk-events" },
               { icon: Activity, label: "Anonymized risk-event JSON" },
               { icon: Cpu, label: "Function Compute (alt path)" },
               { icon: ShieldCheck, label: "Fraud rule enrichment" }
@@ -141,12 +141,12 @@ export default function ArchitecturePage() {
         <div className="card p-5">
           <div className="flex items-center gap-2 mb-3">
             <ShieldCheck className="w-4 h-4 text-safe" strokeWidth={2.5} />
-            <h2 className="heading-md">Why ScamSense wins</h2>
+            <h2 className="heading-md">Why Fakeout wins</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Reason
               title="Solves a real, urgent Malaysian problem"
-              text="Scam-call fraud cost Malaysians RM 1.2B+ in 2023. ScamSense intervenes at the only moment that matters: before the transfer button is pressed."
+              text="Scam-call fraud cost Malaysians RM 1.2B+ in 2023. Fakeout intervenes at the only moment that matters: before the transfer button is pressed."
             />
             <Reason
               title="Privacy-first by design"
@@ -166,7 +166,7 @@ export default function ArchitecturePage() {
             />
             <Reason
               title="Inclusion-grade impact"
-              text="Elderly users, foreign workers, and unbanked communities are disproportionately scammed. ScamSense protects without requiring extra steps."
+              text="Elderly users, foreign workers, and unbanked communities are disproportionately scammed. Fakeout protects without requiring extra steps."
             />
           </div>
         </div>

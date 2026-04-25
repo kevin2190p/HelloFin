@@ -68,7 +68,7 @@ export default function IncomingCall({ onAnswer, onDecline }: Props) {
             <div className="w-1.5 h-1.5 rounded-full bg-warning" />
             <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-warning animate-ping-slow" />
           </div>
-          ScamSense ready · monitoring available
+          Fakeout ready · monitoring available
         </motion.div>
       </motion.div>
 
@@ -85,7 +85,7 @@ export default function IncomingCall({ onAnswer, onDecline }: Props) {
           className="w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-safe to-privacy px-6 py-4 text-sm font-bold text-white shadow-glow-safe transition hover:opacity-95 active:scale-[0.98]"
         >
           <ShieldCheck className="w-5 h-5" strokeWidth={2.5} />
-          Answer with ScamSense
+          Answer with Fakeout
         </button>
 
         <div className="grid grid-cols-2 gap-3">

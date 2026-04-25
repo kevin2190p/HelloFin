@@ -1,5 +1,5 @@
 /**
- * ScamSense — Alibaba Cloud Function Compute: fraud rule enrichment
+ * Fakeout — Alibaba Cloud Function Compute: fraud rule enrichment
  *
  * Runtime: Node.js 18 (or 16)
  * Trigger: HTTP trigger (POST /), public/anonymous OK for demo
@@ -117,7 +117,7 @@ exports.handler = async function (event, context, callback) {
     };
 
     console.log(
-      "ScamSense Alibaba fraud enrichment:",
+      "Fakeout Alibaba fraud enrichment:",
       JSON.stringify({
         ...body,
         processedBy: "Alibaba Function Compute",
@@ -133,7 +133,7 @@ exports.handler = async function (event, context, callback) {
       body: JSON.stringify(response)
     });
   } catch (error) {
-    console.error("ScamSense Alibaba Function error:", error);
+    console.error("Fakeout Alibaba Function error:", error);
     callback(null, {
       statusCode: 500,
       headers: corsHeaders,

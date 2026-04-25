@@ -70,7 +70,7 @@ export default function TngWarning({ onProtected }: Props) {
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-critical animate-pulse" />
             <span className="text-[12px] font-semibold text-critical">
-              Transfer blocked by ScamSense
+              Transfer blocked by Fakeout
             </span>
           </div>
           <div className="text-[10px] text-zinc-400 mt-1">
@@ -107,7 +107,7 @@ export default function TngWarning({ onProtected }: Props) {
                   <div className="absolute inset-0 rounded-full bg-critical/30 animate-ping-slow" />
                 </div>
                 <div>
-                  <div className="text-base font-bold text-critical">ScamSense Alert</div>
+                  <div className="text-base font-bold text-critical">Fakeout Alert</div>
                   <div className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">
                     Critical scam risk detected
                   </div>

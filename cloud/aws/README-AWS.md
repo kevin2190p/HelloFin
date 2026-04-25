@@ -1,18 +1,18 @@
 # AWS Real Cloud Setup (ap-southeast-5, Malaysia)
 
 This folder contains the AWS Lambda code and a sample test event for the
-ScamSense risk-event ingestion endpoint.
+Fakeout risk-event ingestion endpoint.
 
 ## What gets built on AWS
 
 ```
-ScamSense client
+Fakeout client
       │
       ▼
 Amazon API Gateway (HTTP API)   POST /risk-event
       │
       ▼
-AWS Lambda (scamsense-risk-event)   Node.js 20.x
+AWS Lambda (fakeout-risk-event)   Node.js 20.x
       │
       ▼
 Amazon CloudWatch Logs              proof for judges
@@ -25,7 +25,7 @@ Amazon CloudWatch Logs              proof for judges
 1. Go to AWS Console → **Lambda** (region: **Asia Pacific (Malaysia) · ap-southeast-5**).
 2. Click **Create function**.
 3. Choose **Author from scratch**.
-4. Name: `scamsense-risk-event`
+4. Name: `fakeout-risk-event`
 5. Runtime: **Node.js 20.x**
 6. Architecture: x86_64 (default).
 7. Click **Create function**.
@@ -39,7 +39,7 @@ Amazon CloudWatch Logs              proof for judges
 
 ### 3. Test the Lambda directly (optional but useful)
 
-1. **Test** tab → **Create new event** → name `scamsense-test`.
+1. **Test** tab → **Create new event** → name `fakeout-test`.
 2. Paste contents of [`sample-event.json`](./sample-event.json) wrapped in an API Gateway v2 envelope:
    ```json
    {
@@ -48,18 +48,18 @@ Amazon CloudWatch Logs              proof for judges
    }
    ```
 3. Click **Test**. You should see status `200` and the response JSON.
-4. Open **CloudWatch Logs** → log group `/aws/lambda/scamsense-risk-event` → confirm a line
-   starting with `ScamSense risk event:` exists.
+4. Open **CloudWatch Logs** → log group `/aws/lambda/fakeout-risk-event` → confirm a line
+   starting with `Fakeout risk event:` exists.
 
 ### 4. Create the API Gateway HTTP API
 
 1. AWS Console → **API Gateway** → **Create API** → **HTTP API** → **Build**.
-2. Add integration: **Lambda** → select `scamsense-risk-event`.
-3. API name: `scamsense-api`.
+2. Add integration: **Lambda** → select `fakeout-risk-event`.
+3. API name: `fakeout-api`.
 4. **Configure routes**:
    - Method: `POST`
    - Resource path: `/risk-event`
-   - Integration target: `scamsense-risk-event`
+   - Integration target: `fakeout-risk-event`
 5. **Configure stages**: keep `$default` (auto-deploy).
 6. **CORS** (under API → CORS):
    - Access-Control-Allow-Origin: `*`
@@ -70,7 +70,7 @@ Amazon CloudWatch Logs              proof for judges
    `https://abc123xyz.execute-api.ap-southeast-5.amazonaws.com`
 9. Your endpoint is `https://...amazonaws.com/risk-event`.
 
-### 5. Wire it into ScamSense
+### 5. Wire it into Fakeout
 
 In `.env.local` at the project root:
 
@@ -84,9 +84,9 @@ Restart `npm run dev`. Open the app → click **Test Cloud** → AWS card should
 
 ### 6. Demo proof for judges
 
-- ✅ API Gateway route `/risk-event` exists in `scamsense-api`
-- ✅ Lambda function `scamsense-risk-event` exists, runtime Node.js 20.x
-- ✅ CloudWatch log group `/aws/lambda/scamsense-risk-event` shows `ScamSense risk event:` lines
+- ✅ API Gateway route `/risk-event` exists in `fakeout-api`
+- ✅ Lambda function `fakeout-risk-event` exists, runtime Node.js 20.x
+- ✅ CloudWatch log group `/aws/lambda/fakeout-risk-event` shows `Fakeout risk event:` lines
   with the actual `awsRequestId` returned to the frontend
 - ✅ Frontend cloud verification screen displays the same `awsRequestId` and `processedAt` timestamp
 

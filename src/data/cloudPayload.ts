@@ -15,7 +15,7 @@ export type RiskCloudPayload = {
 };
 
 export const cloudPayload: RiskCloudPayload = {
-  eventId: "scamsense-demo-001",
+  eventId: "fakeout-demo-001",
   timestamp: "2026-01-15T10:30:00+08:00",
   riskScore: 94,
   riskLevel: "critical",
@@ -39,7 +39,7 @@ export const cloudPayload: RiskCloudPayload = {
 /** Build a fresh payload at runtime (so eventId/timestamp are unique per click) */
 export function buildPayload(overrides?: Partial<RiskCloudPayload>): RiskCloudPayload {
   const now = new Date();
-  const id = `scamsense-${now.getTime().toString(36)}`;
+  const id = `fakeout-${now.getTime().toString(36)}`;
   return {
     ...cloudPayload,
     eventId: id,

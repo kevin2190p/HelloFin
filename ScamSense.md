@@ -1,4 +1,4 @@
-# ScamSense
+# Fakeout
 
 > **The Pre-Transaction Circuit Breaker for Social-Engineering Fraud**
 >
@@ -30,15 +30,15 @@ Built for **TNG Digital FINHACK 2026**.
 18. [36-Hour Execution Plan](#18-36-hour-execution-plan)
 19. [Synthetic Dataset Plan](#19-synthetic-dataset-plan)
 20. [Repo Scaffold](#20-repo-scaffold)
-21. [Why ScamSense Wins](#21-why-scamsense-wins)
+21. [Why Fakeout Wins](#21-why-fakeout-wins)
 
 ---
 
 ## 1. Executive Summary
 
-ScamSense is an opt-in **"Guardian Mode"** inside the TNG Digital app that prevents scam-induced transactions at the moment of psychological manipulation — while the victim is still on the phone call.
+Fakeout is an opt-in **"Guardian Mode"** inside the TNG Digital app that prevents scam-induced transactions at the moment of psychological manipulation — while the victim is still on the phone call.
 
-Unlike every existing fraud system (which reacts **after** the money moves), ScamSense is a **pre-transaction behavioral circuit breaker**. It fuses three independent sensors — acoustic (what you hear), behavioral (how you tap), and contextual (where the money is going) — and locks the wallet the instant two sensors agree a scam is happening.
+Unlike every existing fraud system (which reacts **after** the money moves), Fakeout is a **pre-transaction behavioral circuit breaker**. It fuses three independent sensors — acoustic (what you hear), behavioral (how you tap), and contextual (where the money is going) — and locks the wallet the instant two sensors agree a scam is happening.
 
 All voice analysis runs **on-device**. The voice never leaves the phone. Only a risk score (a number between 0 and 1) crosses the network boundary.
 
@@ -68,7 +68,7 @@ The gap — those 11 minutes of manipulation — is where every existing system 
 
 ## 3. Product Concept
 
-ScamSense ships as an opt-in **Guardian Mode** inside TNG. When enabled, it:
+Fakeout ships as an opt-in **Guardian Mode** inside TNG. When enabled, it:
 
 1. Silently monitors call state via OS telephony signals
 2. When a call becomes active, begins **on-device** analysis of speech patterns, user behavior, and recipient risk
@@ -89,7 +89,7 @@ ScamSense ships as an opt-in **Guardian Mode** inside TNG. When enabled, it:
 
 ## 4. The Three-Sensor Circuit Breaker
 
-The defining architectural decision. ScamSense is not a classifier — it is a **fusion engine**.
+The defining architectural decision. Fakeout is not a classifier — it is a **fusion engine**.
 
 ### Sensor 1: Acoustic (on-device)
 
@@ -131,7 +131,7 @@ elif high == 1: verdict = WARN (soft nudge)
 else: verdict = ALLOW
 ```
 
-**Why AND-logic matters:** multi-sensor AND-logic reduces the false-positive rate by ~40× vs. any single sensor alone. It is the core reason ScamSense beats the "but it's just a classifier" objection.
+**Why AND-logic matters:** multi-sensor AND-logic reduces the false-positive rate by ~40× vs. any single sensor alone. It is the core reason Fakeout beats the "but it's just a classifier" objection.
 
 ---
 
@@ -155,7 +155,7 @@ else: verdict = ALLOW
 - **User base:** protects TNG's 26M users at the exact moment of highest vulnerability
 - **Data advantage:** uses TNG's existing payee graph, merchant network, and transaction velocity as the contextual sensor's substrate
 - **Brand alignment:** transforms TNG from a passive payment tool into an active guardian — a trust-manufacturing product
-- **Strategic positioning:** in the 2025–2026 BNM fraud-prevention landscape, ScamSense can be positioned as Malaysia's **national pre-transaction fraud infrastructure**, licensable to banks
+- **Strategic positioning:** in the 2025–2026 BNM fraud-prevention landscape, Fakeout can be positioned as Malaysia's **national pre-transaction fraud infrastructure**, licensable to banks
 
 ---
 
@@ -228,7 +228,7 @@ Every architectural decision must make this literally true. This is the shield.
 ### The Privacy Contract (Shown On-Device to User)
 
 ```
-ScamSense Guardian Mode — Privacy Contract
+Fakeout Guardian Mode — Privacy Contract
 
 ✓ Audio is processed ONLY on your device
 ✓ No audio, recording, or transcript is EVER saved,
@@ -294,7 +294,7 @@ The *other person* on the call has not consented. Our defense:
 
 ### Layer 5: Trusted Execution Environment
 
-Inference runs inside Android StrongBox / TrustZone TEE. Even a malicious copy of ScamSense couldn't exfiltrate audio — the TEE attests that only signed, verified code touches the mic stream.
+Inference runs inside Android StrongBox / TrustZone TEE. Even a malicious copy of Fakeout couldn't exfiltrate audio — the TEE attests that only signed, verified code touches the mic stream.
 
 ---
 
@@ -314,7 +314,7 @@ Inference runs inside Android StrongBox / TrustZone TEE. Even a malicious copy o
 - Subscribes to `TelephonyManager.CALL_STATE_OFFHOOK`
 - Call becomes active → loads Whisper + classifier → starts mic
 - Call ends → flushes RAM buffer → unloads models → returns idle
-- Persistent, non-dismissible notification: *"ScamSense Guardian is armed"* — OS-enforced transparency
+- Persistent, non-dismissible notification: *"Fakeout Guardian is armed"* — OS-enforced transparency
 
 ### iOS Implementation (v1 limitations documented honestly)
 
@@ -366,7 +366,7 @@ Inference runs inside Android StrongBox / TrustZone TEE. Even a malicious copy o
 
 ### PDPA Malaysia 2010 (and 2024 amendments)
 
-| Principle | ScamSense Compliance |
+| Principle | Fakeout Compliance |
 |---|---|
 | Consent | Explicit opt-in, granular, revocable |
 | Purpose limitation | Audio processed solely for scam detection |
@@ -399,7 +399,7 @@ Inference runs inside Android StrongBox / TrustZone TEE. Even a malicious copy o
 
 ## 12. Independent Verifiability
 
-Anyone can claim on-device. Here's how ScamSense *proves* it:
+Anyone can claim on-device. Here's how Fakeout *proves* it:
 
 1. **Open-source audio module.** Publish on GitHub, MIT license. Anyone can audit.
 2. **Third-party audit.** Pre-launch engagement with CyberSecurity Malaysia (CSM) or MCMC-recognized auditor. Report published.
@@ -463,7 +463,7 @@ Anyone can claim on-device. Here's how ScamSense *proves* it:
 - *The gap is the product.*
 **Visual:** Timeline bar. At minute 11, "money gone." At minute 120, bank icon arrives.
 
-### Slide 2 — ScamSense: The Pre-Transaction Circuit Breaker
+### Slide 2 — Fakeout: The Pre-Transaction Circuit Breaker
 **Headline:** Not a fraud dashboard. A circuit breaker for trust.
 Three independent sensors fused in real time. Any two agreeing = wallet locks.
 - **Acoustic** — what you hear (on-device Whisper + DistilBERT)
@@ -498,7 +498,7 @@ Three independent sensors fused in real time. Any two agreeing = wallet locks.
 
 **30-second version:**
 
-> *"Malaysians lose RM1.2 billion a year to scam calls — not to hacked systems, but to hacked humans. Every bank reacts after the money moves. ScamSense is the first pre-transaction circuit breaker: three independent sensors — what you hear, how you tap, and where the money is going — fused on-device and across AWS and Alibaba Cloud. When two sensors agree it's a scam, we lock the wallet and ping someone who loves you. It's not a fraud dashboard. It's a circuit breaker for trust itself."*
+> *"Malaysians lose RM1.2 billion a year to scam calls — not to hacked systems, but to hacked humans. Every bank reacts after the money moves. Fakeout is the first pre-transaction circuit breaker: three independent sensors — what you hear, how you tap, and where the money is going — fused on-device and across AWS and Alibaba Cloud. When two sensors agree it's a scam, we lock the wallet and ping someone who loves you. It's not a fraud dashboard. It's a circuit breaker for trust itself."*
 
 **One-liner (memorize):**
 
@@ -728,7 +728,7 @@ Auxiliary labels enable multi-task training — those signals become the per-sen
 ## 20. Repo Scaffold
 
 ```
-scamsense/
+fakeout/
 ├── README.md
 ├── .env.example
 ├── docker-compose.yml
@@ -927,7 +927,7 @@ if __name__ == "__main__":
 ### Quick Start
 
 ```bash
-git clone ... && cd scamsense
+git clone ... && cd fakeout
 cp .env.example .env
 ./scripts/dev_up.sh
 cd apps/mobile && npx expo run:android
@@ -935,7 +935,7 @@ cd apps/mobile && npx expo run:android
 
 ---
 
-## 21. Why ScamSense Wins
+## 21. Why Fakeout Wins
 
 Mapped to the judging criteria:
 

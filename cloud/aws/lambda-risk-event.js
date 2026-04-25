@@ -1,12 +1,12 @@
 /**
- * ScamSense — AWS Lambda function: risk-event ingestion
+ * Fakeout — AWS Lambda function: risk-event ingestion
  *
  * Runtime: Node.js 20.x (or 18.x)
  * Region:  ap-southeast-5 (Asia Pacific, Malaysia)
  *
  * Triggered by: Amazon API Gateway HTTP API, route POST /risk-event
  *
- * Receives anonymized risk metadata from a ScamSense client, validates it,
+ * Receives anonymized risk metadata from a Fakeout client, validates it,
  * logs it to CloudWatch Logs, and returns an enriched response.
  *
  * Audio and full transcript are NEVER sent to this function — the client
@@ -76,7 +76,7 @@ export const handler = async (event, context) => {
 
     // CloudWatch log line — searchable proof for judges
     console.log(
-      "ScamSense risk event:",
+      "Fakeout risk event:",
       JSON.stringify({
         ...body,
         processedBy: "AWS Lambda",
@@ -91,7 +91,7 @@ export const handler = async (event, context) => {
       body: JSON.stringify(response)
     };
   } catch (error) {
-    console.error("ScamSense AWS Lambda error:", error);
+    console.error("Fakeout AWS Lambda error:", error);
 
     return {
       statusCode: 500,

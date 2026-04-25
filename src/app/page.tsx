@@ -45,7 +45,7 @@ const STEP_LABELS = [
   "Protected"
 ];
 
-export default function ScamSensePage() {
+export default function FakeoutPage() {
   const router = useRouter();
   const [screen, setScreen] = useState<Screen>("home");
 

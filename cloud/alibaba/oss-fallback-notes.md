@@ -1,4 +1,4 @@
-# Alibaba OSS Fallback — How the ScamSense API route uses it
+# Alibaba OSS Fallback — How the Fakeout API route uses it
 
 The Next.js `/api/test-cloud` route automatically uses the **OSS upload path**
 when `ALIBABA_FRAUD_API_URL` is empty. This is the recommended path because:
@@ -35,10 +35,10 @@ The frontend receives an object like:
   "service": "OSS → Anonymized Risk Event Storage",
   "status": "stored",
   "message": "Anonymized risk event stored in Alibaba OSS.",
-  "eventId": "scamsense-1q2w3e",
-  "bucket": "scamsense-demo-risk-events",
-  "objectKey": "risk-events/scamsense-1q2w3e.json",
-  "url": "https://scamsense-demo-risk-events.oss-ap-southeast-3.aliyuncs.com/risk-events/...",
+  "eventId": "fakeout-1q2w3e",
+  "bucket": "fakeout-demo-risk-events",
+  "objectKey": "risk-events/fakeout-1q2w3e.json",
+  "url": "https://fakeout-demo-risk-events.oss-ap-southeast-3.aliyuncs.com/risk-events/...",
   "requestId": "5F1B...",
   "processedAt": "2026-04-25T10:30:00.000Z"
 }
@@ -46,11 +46,11 @@ The frontend receives an object like:
 
 ## Demo proof for judges
 
-1. In the ScamSense UI, click **Test Cloud** → Alibaba card shows **Connected**.
-2. Open Alibaba Console → **Object Storage Service** → bucket `scamsense-demo-risk-events`
+1. In the Fakeout UI, click **Test Cloud** → Alibaba card shows **Connected**.
+2. Open Alibaba Console → **Object Storage Service** → bucket `fakeout-demo-risk-events`
    → folder `risk-events/` → click any object → **Object details** shows the
    exact `eventId`, `risk-score`, `risk-level` in user metadata.
-3. Compare the `objectKey` shown in the ScamSense UI with the file in OSS — they match.
+3. Compare the `objectKey` shown in the Fakeout UI with the file in OSS — they match.
 
 ## Privacy
 

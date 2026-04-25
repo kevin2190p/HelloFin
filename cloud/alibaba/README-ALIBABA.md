@@ -1,6 +1,6 @@
 # Alibaba Cloud Real Setup
 
-ScamSense supports **two paths** for real Alibaba Cloud integration. Pick the
+Fakeout supports **two paths** for real Alibaba Cloud integration. Pick the
 one your RAM role can actually use:
 
 | Path | When to use | Service |
@@ -20,7 +20,7 @@ This path was explicitly chosen because your account has **OSS** in
 ### 1. Create the bucket
 
 1. Alibaba Cloud Console → **Object Storage Service** → **Buckets** → **Create Bucket**.
-2. Bucket name: `scamsense-demo-risk-events` (must be globally unique — adjust if taken).
+2. Bucket name: `fakeout-demo-risk-events` (must be globally unique — adjust if taken).
 3. Region: **Asia Pacific SE 3 (Kuala Lumpur)** → endpoint `oss-ap-southeast-3.aliyuncs.com`.
    (Singapore `oss-ap-southeast-1` also works.)
 4. Storage Class: **Standard**.
@@ -32,16 +32,16 @@ This path was explicitly chosen because your account has **OSS** in
 1. Top-right avatar → **AccessKey Management**.
 2. Click **Create AccessKey**.
 3. **Copy the AccessKey ID and Secret** — you can't see the secret again.
-4. (Optional but recommended) Use a RAM sub-user dedicated to ScamSense with
+4. (Optional but recommended) Use a RAM sub-user dedicated to Fakeout with
    only `oss:PutObject` and `oss:GetObject` on this bucket.
 
-### 3. Wire credentials into ScamSense
+### 3. Wire credentials into Fakeout
 
 In `.env.local` at the project root:
 
 ```bash
 ALIBABA_OSS_REGION=oss-ap-southeast-3
-ALIBABA_OSS_BUCKET=scamsense-demo-risk-events
+ALIBABA_OSS_BUCKET=fakeout-demo-risk-events
 ALIBABA_OSS_ACCESS_KEY_ID=LTAI...your-key
 ALIBABA_OSS_ACCESS_KEY_SECRET=your-secret
 # Leave Function Compute URL empty so the API route uses OSS:
@@ -52,11 +52,11 @@ Restart `npm run dev`.
 
 ### 4. Test it
 
-1. Open ScamSense → click **Test Cloud** (Home or Cloud screen).
+1. Open Fakeout → click **Test Cloud** (Home or Cloud screen).
 2. The Alibaba card should turn **Connected** and show:
    - `service: OSS → Anonymized Risk Event Storage`
-   - `bucket: scamsense-demo-risk-events`
-   - `objectKey: risk-events/scamsense-...`
+   - `bucket: fakeout-demo-risk-events`
+   - `objectKey: risk-events/fakeout-...`
 3. Open the Alibaba console → **OSS** → bucket → folder `risk-events/`.
    You should see a JSON object with the same `eventId`.
 4. Click the object → **Object details** → confirm the user metadata:
@@ -64,9 +64,9 @@ Restart `npm run dev`.
 
 ### 5. Demo proof for judges
 
-- ✅ OSS bucket `scamsense-demo-risk-events` exists in `ap-southeast-3`.
+- ✅ OSS bucket `fakeout-demo-risk-events` exists in `ap-southeast-3`.
 - ✅ Folder `risk-events/` contains JSON objects, one per Test Cloud click.
-- ✅ The `objectKey` shown in the ScamSense UI matches the one in OSS.
+- ✅ The `objectKey` shown in the Fakeout UI matches the one in OSS.
 - ✅ User metadata on each object shows the same risk score / level seen in the UI.
 
 ---
@@ -79,7 +79,7 @@ Function Compute access.
 ### 1. Create the service & function
 
 1. Alibaba Cloud Console → **Function Compute** (region: ap-southeast-3 KL).
-2. Create service: `scamsense-fraud`.
+2. Create service: `fakeout-fraud`.
 3. Create function:
    - Name: `fraud-enrichment`
    - Runtime: **Node.js 18**
@@ -96,7 +96,7 @@ Function Compute access.
 4. Methods: `POST`, `OPTIONS`.
 5. Save and copy the **Trigger URL** (e.g. `https://....fcapp.run`).
 
-### 3. Wire URL into ScamSense
+### 3. Wire URL into Fakeout
 
 ```bash
 ALIBABA_FRAUD_API_URL=https://your-function-id.fcapp.run
@@ -107,10 +107,10 @@ Restart `npm run dev`.
 
 ### 4. Test it
 
-- ScamSense Test Cloud → Alibaba card now shows
+- Fakeout Test Cloud → Alibaba card now shows
   `service: Function Compute → Fraud Rule Enrichment` and a real `requestId`.
 - Open **Function Compute** → function logs → confirm a line starting with
-  `ScamSense Alibaba fraud enrichment:` for the same `eventId`.
+  `Fakeout Alibaba fraud enrichment:` for the same `eventId`.
 
 ---
 

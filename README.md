@@ -1,4 +1,4 @@
-# ScamSense
+# Fakeout
 
 > **Stop scam calls before money leaves your wallet.**
 > Private on-device AI scam-call protection for Touch 'n Go eWallet users in Malaysia.
@@ -14,7 +14,7 @@ impersonate **PDRM, Bank Negara, banks, customs, delivery companies, and eWallet
 support teams**, then pressure victims into transferring money urgently to "avoid
 account freezing" or "clear money laundering allegations."
 
-**ScamSense** intercepts the moment **before** the user transfers money:
+**Fakeout** intercepts the moment **before** the user transfers money:
 
 1. The phone monitors unknown calls.
 2. The call is transcribed locally (speech-to-text).
@@ -63,9 +63,9 @@ that is real.
 ## 5. AWS integration
 
 - Endpoint: `POST {AWS_RISK_API_URL}` (e.g. `https://...execute-api.ap-southeast-5.amazonaws.com/risk-event`)
-- Lambda function: `scamsense-risk-event` (Node.js 20.x)
-- Logs: CloudWatch Logs group `/aws/lambda/scamsense-risk-event` — every Test Cloud
-  click writes a `ScamSense risk event:` line with the same `awsRequestId` returned
+- Lambda function: `fakeout-risk-event` (Node.js 20.x)
+- Logs: CloudWatch Logs group `/aws/lambda/fakeout-risk-event` — every Test Cloud
+  click writes a `Fakeout risk event:` line with the same `awsRequestId` returned
   to the frontend.
 
 Setup details: [`cloud/aws/README-AWS.md`](./cloud/aws/README-AWS.md).
@@ -75,7 +75,7 @@ Setup details: [`cloud/aws/README-AWS.md`](./cloud/aws/README-AWS.md).
 Default path is **OSS**, chosen because the FINHACK RAM role has OSS access
 in *Recently visited*.
 
-- Bucket: `scamsense-demo-risk-events` (region `oss-ap-southeast-3`).
+- Bucket: `fakeout-demo-risk-events` (region `oss-ap-southeast-3`).
 - Each Test Cloud click uploads an object at `risk-events/{eventId}.json` with
   user metadata `event-id`, `risk-level`, `risk-score` for verification.
 - Optional Function Compute path documented for completeness.
@@ -96,7 +96,7 @@ Setup details: [`cloud/alibaba/README-ALIBABA.md`](./cloud/alibaba/README-ALIBAB
 
 ## 8. AI design
 
-ScamSense simulates an **on-device Qwen 2.5** model in two sizes:
+Fakeout simulates an **on-device Qwen 2.5** model in two sizes:
 
 | Variant | Use case |
 |---|---|
@@ -128,7 +128,7 @@ testable — judges can trace exactly why the score is 94/100.
 ## 9. Hackathon judging criteria mapping
 
 ### AI & Intelligent Systems
-ScamSense uses **simulated local Qwen 2.5 inference** to analyze a scam-call
+Fakeout uses **simulated local Qwen 2.5 inference** to analyze a scam-call
 transcript and detects authority impersonation, urgency, legal threats,
 account-freeze threats, and suspicious transfer instructions. The risk engine
 is deterministic and explainable. Production drop-in path is documented.
@@ -141,9 +141,9 @@ live request IDs, fraud intelligence dashboard, architecture diagram, and
 README docs.
 
 ### Multi-Cloud Service Usage
-- **AWS**: API Gateway HTTP API → Lambda function `scamsense-risk-event` →
+- **AWS**: API Gateway HTTP API → Lambda function `fakeout-risk-event` →
   CloudWatch Logs (real logs visible in `ap-southeast-5` console).
-- **Alibaba Cloud**: OSS bucket `scamsense-demo-risk-events` stores anonymized
+- **Alibaba Cloud**: OSS bucket `fakeout-demo-risk-events` stores anonymized
   risk-event JSON in `oss-ap-southeast-3` (real objects visible in console).
   Function Compute path also implemented as an alternative.
 
@@ -188,7 +188,7 @@ AWS_REGION=ap-southeast-5
 
 # Alibaba OSS — preferred path
 ALIBABA_OSS_REGION=oss-ap-southeast-3
-ALIBABA_OSS_BUCKET=scamsense-demo-risk-events
+ALIBABA_OSS_BUCKET=fakeout-demo-risk-events
 ALIBABA_OSS_ACCESS_KEY_ID=
 ALIBABA_OSS_ACCESS_KEY_SECRET=
 

@@ -2,12 +2,12 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ScamSense — Stop scam calls before money leaves your wallet",
+  title: "Fakeout — Stop scam calls before money leaves your wallet",
   description:
     "Private on-device AI scam call protection. Real multi-cloud risk pipeline (AWS + Alibaba Cloud) for Touch 'n Go eWallet users in Malaysia.",
-  applicationName: "ScamSense",
+  applicationName: "Fakeout",
   keywords: [
-    "ScamSense",
+    "Fakeout",
     "Touch n Go",
     "TNG",
     "scam detection",
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     "Malaysia fintech",
     "FINHACK 2026"
   ],
-  authors: [{ name: "ScamSense Team" }]
+  authors: [{ name: "Fakeout Team" }]
 };
 
 export const viewport: Viewport = {
