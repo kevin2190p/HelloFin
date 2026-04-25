@@ -8,6 +8,7 @@ SOC2-ready audit logging, zero-trust design.
 import os
 import time
 import uuid
+import asyncio
 from contextlib import asynccontextmanager
 
 import redis.asyncio as aioredis
@@ -16,8 +17,10 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import webhook, risk, tng, chat
+from app.routers import webhook, risk, tng, chat, audio_risk, telegram
 from app.services.audit_logger import AuditLogger
+from app.services.mock_redis import MockRedis
+from app.routers.telegram import start_telegram_polling
 
 load_dotenv()
 
@@ -44,10 +47,41 @@ logger = structlog.get_logger("hellofin")
 async def lifespan(app: FastAPI):
     """Application lifecycle: init Redis connection pool, audit logger."""
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    app.state.redis = aioredis.from_url(redis_url, decode_responses=True)
+    
+    try:
+        # Attempt real Redis connection
+        redis = aioredis.from_url(redis_url, decode_responses=True)
+        # Ping to verify connection
+        await asyncio.wait_for(redis.ping(), timeout=2.0)
+        app.state.redis = redis
+        logger.info("redis_connected", redis_url=redis_url)
+    except Exception as e:
+        # Fallback to In-Memory Mock
+        logger.warn("redis_connection_failed", error=str(e), action="falling_back_to_mock_redis")
+        app.state.redis = MockRedis()
+        
     app.state.audit = AuditLogger()
-    logger.info("hellofin_startup", redis_url=redis_url)
+    logger.info("hellofin_startup")
+    
+    async def polling_wrapper():
+        while True:
+            try:
+                await start_telegram_polling(app)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error("telegram_polling_crashed", error=str(e))
+                await asyncio.sleep(5) # Wait before restart
+                
+    # Start Telegram Polling in background
+    polling_task = asyncio.create_task(polling_wrapper())
+    
     yield
+    polling_task.cancel()
+    try:
+        await polling_task
+    except asyncio.CancelledError:
+        pass
     await app.state.redis.close()
     logger.info("hellofin_shutdown")
 
@@ -57,6 +91,7 @@ app = FastAPI(
     description="Bank-grade voice phishing detection for TNG Digital FINHACK 2026",
     version="1.0.0",
     lifespan=lifespan,
+    redirect_slashes=True,
 )
 
 # CORS – allow frontend dashboard
@@ -97,6 +132,9 @@ async def audit_middleware(request: Request, call_next):
         user_agent=request.headers.get("user-agent", ""),
     )
 
+    if response.status_code == 404:
+        logger.warn("http_404_not_found", path=str(request.url.path), method=request.method)
+
     response.headers["X-Request-ID"] = request_id
     return response
 
@@ -108,11 +146,25 @@ app.include_router(webhook.router, prefix="/webhook", tags=["Webhook"])
 app.include_router(risk.router, prefix="/risk", tags=["Risk Scoring"])
 app.include_router(tng.router, tags=["TNG eWallet & Caregiver"])
 app.include_router(chat.router, prefix="/chat", tags=["Chat Widget"])
+app.include_router(audio_risk.router, prefix="/risk", tags=["Voice Risk Detection"])
+app.include_router(telegram.router, prefix="/webhook/telegram", tags=["Telegram Webhook"])
 
 
 # ────────────────────────────────────────────
 # Health check
 # ────────────────────────────────────────────
+@app.get("/", include_in_schema=False)
+async def root():
+    """Redirect root to API docs."""
+    return {"message": "HelloFin API is running. Visit /docs for documentation."}
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Handle favicon requests to prevent 404s in browser."""
+    return Response(content="", media_type="image/x-icon")
+
+
 @app.get("/health", tags=["System"])
 async def health_check():
     """Health endpoint for Docker and load balancer probes."""

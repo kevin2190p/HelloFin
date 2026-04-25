@@ -6,15 +6,39 @@ Accepts transcript + context → returns detailed risk breakdown.
 """
 
 import structlog
-from fastapi import APIRouter
-
+from fastapi import APIRouter, Request
+from pydantic import BaseModel
 from app.models.schemas import RiskRequest, RiskResponse
 from app.services.risk_scorer import calculate_risk_score
-from app.services.cloud_clients import invoke_aws_lambda
+from app.services.analysis_service import process_message
 
 logger = structlog.get_logger("hellofin.risk")
 
 router = APIRouter()
+
+class ScanMessage(BaseModel):
+    message: str
+
+@router.post("/scan")
+async def scan(msg: ScanMessage, request: Request):
+    """
+    Simplified scan endpoint matching user's architecture guide.
+    Powered by Advanced AI (Groq + HuggingFace).
+    """
+    redis = request.app.state.redis
+    result = await process_message(
+        redis=redis,
+        transcript=msg.message,
+        sender_phone="api_test",
+        message_type="api_scan"
+    )
+    
+    return {
+        "message": msg.message,
+        "riskScore": result.risk_score,
+        "status": "HIGH RISK ⚠️" if result.risk_score >= 70 else ("MEDIUM RISK ⚠️" if result.risk_score >= 40 else "SAFE"),
+        "reasons": [f.get("factor", f.get("category", "Suspicious pattern")) for f in result.risk_factors]
+    }
 
 
 @router.post("/score", response_model=RiskResponse)

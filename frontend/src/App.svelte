@@ -171,6 +171,26 @@
           <div class="a-row"><span>From</span><span>{a.sender_phone}</span></div>
           <div class="a-row"><span>Amount</span><span>RM {a.transaction_amount?.toLocaleString('en-MY',{minimumFractionDigits:2})}</span></div>
           <div class="a-row"><span>Reason</span><span class="a-reason">{a.reason}</span></div>
+          
+          {#if a.transcript}
+            <div class="a-voice-scrutiny">
+              <div class="a-scrutiny-header">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+                AI Voice Transcript
+              </div>
+              <p class="a-transcript">"{a.transcript}"</p>
+              
+              {#if a.translation}
+                <div class="a-translation-box">
+                  <div class="a-scrutiny-header" style="color: #A855F7">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>
+                    English Translation
+                  </div>
+                  <p class="a-transcript">"{a.translation}"</p>
+                </div>
+              {/if}
+            </div>
+          {/if}
           <div class="a-actions">
             <button class="btn-block" on:click={()=>onCancel(a.txn_id)}>🚫 Block & Cancel</button>
             <button class="btn-approve" on:click={()=>onApprove(a.txn_id)}>✅ Approve</button>
@@ -268,6 +288,37 @@
   .resolved-row{display:flex;align-items:center;gap:16px;padding:12px 16px;background:rgba(30,42,50,.4);border:1px solid rgba(255,255,255,.04);border-radius:10px;margin-bottom:6px;font-size:.78rem;color:#9CA3AF}
   .r-stat{font-weight:700;text-transform:uppercase;font-size:.68rem;min-width:100px}
   .r-stat.approved{color:#10B981}.r-stat.cancelled{color:#DC2626}
+
+  /* Voice Scrutiny Styles */
+  .a-voice-scrutiny {
+    margin-top: 14px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+  }
+  .a-scrutiny-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #3B82F6;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .a-transcript {
+    font-size: 0.8rem;
+    color: #E5E7EB;
+    line-height: 1.4;
+    font-style: italic;
+  }
+  .a-translation-box {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
 
   footer{text-align:center;padding:32px 0 16px;color:#9CA3AF;font-size:.7rem}
   @media(max-width:900px){.wa-layout{grid-template-columns:1fr}.stats{grid-template-columns:1fr}}

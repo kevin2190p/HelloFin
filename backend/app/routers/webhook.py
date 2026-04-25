@@ -29,6 +29,7 @@ from app.services.risk_scorer import calculate_risk_score
 from app.services.llm_analyzer import analyze_with_qwen
 from app.services.cloud_clients import upload_to_alibaba_oss
 from app.models.schemas import WebhookResponse, TransactionRecord
+from app.services.analysis_service import process_message
 
 logger = structlog.get_logger("hellofin.webhook")
 
@@ -88,10 +89,9 @@ async def receive_whatsapp_voice(
         logger.error("stt_failed", txn_id=txn_id, error=str(e))
         raise HTTPException(status_code=502, detail=f"STT failed: {e}")
 
-    return await _process_and_respond(
+    return await process_message(
         redis=redis,
         txn_id=txn_id,
-        timestamp=timestamp,
         transcript=transcript,
         sender_phone=sender_phone,
         is_new_payee=is_new_payee,
@@ -130,10 +130,9 @@ async def receive_whatsapp_text(
                 sender=payload.sender_phone,
                 preview=payload.text[:80])
 
-    return await _process_and_respond(
+    return await process_message(
         redis=redis,
         txn_id=txn_id,
-        timestamp=timestamp,
         transcript=payload.text,
         sender_phone=payload.sender_phone,
         is_new_payee=payload.is_new_payee,
@@ -142,99 +141,3 @@ async def receive_whatsapp_text(
     )
 
 
-# ─────────────────────────────────────────────────────────────
-# SHARED ANALYSIS ENGINE
-# ─────────────────────────────────────────────────────────────
-async def _process_and_respond(
-    redis,
-    txn_id: str,
-    timestamp: float,
-    transcript: str,
-    sender_phone: str,
-    is_new_payee: bool,
-    transaction_amount: float,
-    message_type: str,
-) -> WebhookResponse:
-    """
-    Run dual-layer analysis: keyword engine + Qwen3 LLM.
-    Fuse scores for final verdict.
-    """
-
-    # ── Layer 1: Keyword Risk Scorer (instant, <1ms) ───────
-    keyword_result = calculate_risk_score(
-        transcript=transcript,
-        caller_number=sender_phone,
-        is_new_payee=is_new_payee,
-        transaction_amount=transaction_amount,
-    )
-    keyword_score = keyword_result["risk_score"]
-
-    # ── Layer 2: Qwen3 LLM Analysis (deep, ~2-5s) ──────────
-    llm_result = await analyze_with_qwen(
-        text=transcript,
-        sender_phone=sender_phone,
-    )
-    llm_score = llm_result.get("risk_score", 0)
-    llm_confidence = llm_result.get("confidence", 0)
-
-    # ── Score Fusion: weighted average ─────────────────────
-    # LLM gets higher weight if confident (>70%), else equal split
-    if llm_confidence >= 70:
-        final_score = int(keyword_score * 0.35 + llm_score * 0.65)
-    else:
-        final_score = int(keyword_score * 0.6 + llm_score * 0.4)
-
-    final_score = min(final_score, 100)
-
-    # Merge risk factors from both layers
-    all_factors = keyword_result.get("risk_factors", [])
-    if llm_result.get("detected_tactics"):
-        all_factors.append({
-            "category": "llm_deep_analysis",
-            "points": llm_score,
-            "matches": llm_result.get("flagged_phrases", [])[:5],
-            "description": f"Qwen3: {llm_result.get('explanation', '')}",
-            "scam_type": llm_result.get("scam_type", "unknown"),
-            "language": llm_result.get("language_detected", "unknown"),
-        })
-
-    threshold_high = int(os.getenv("RISK_THRESHOLD_HIGH", "80"))
-    status = "held" if final_score >= threshold_high else "cleared"
-
-    logger.warning("verdict",
-                   txn_id=txn_id,
-                   sender=sender_phone,
-                   message_type=message_type,
-                   keyword_score=keyword_score,
-                   llm_score=llm_score,
-                   final_score=final_score,
-                   status=status,
-                   is_scam=llm_result.get("is_scam"))
-
-    # ── Store in Redis ──────────────────────────────────────
-    record = TransactionRecord(
-        txn_id=txn_id,
-        sender_phone=sender_phone,
-        transcript=transcript,
-        risk_score=final_score,
-        risk_factors=all_factors,
-        is_new_payee=is_new_payee,
-        transaction_amount=transaction_amount,
-        status=status,
-        timestamp=timestamp,
-    )
-
-    await redis.hset(f"txn:{txn_id}", mapping=record.model_dump_redis())
-    if status == "held":
-        await redis.sadd("txn:pending", txn_id)
-        auto_cancel_sec = int(os.getenv("AUTO_CANCEL_SECONDS", "600"))
-        await redis.setex(f"txn:timer:{txn_id}", auto_cancel_sec, "pending")
-
-    return WebhookResponse(
-        txn_id=txn_id,
-        transcript=transcript,
-        risk_score=final_score,
-        risk_factors=all_factors,
-        status=status,
-        auto_cancel_after_sec=600 if status == "held" else None,
-    )

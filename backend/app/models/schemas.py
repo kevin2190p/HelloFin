@@ -24,6 +24,7 @@ class RiskResponse(BaseModel):
 class WebhookResponse(BaseModel):
     txn_id: str
     transcript: str
+    translation: Optional[str] = None
     risk_score: int
     risk_factors: list[dict]
     status: str
@@ -53,6 +54,8 @@ class CaregiverAlert(BaseModel):
     reason: str = ""
     timestamp: float = 0.0
     status: str = "pending"
+    transcript: Optional[str] = None
+    translation: Optional[str] = None
 
 
 class ActionResponse(BaseModel):
@@ -65,6 +68,7 @@ class TransactionRecord(BaseModel):
     txn_id: str
     sender_phone: str
     transcript: str
+    translation: Optional[str] = None
     risk_score: int
     risk_factors: list[dict] = []
     is_new_payee: bool = False

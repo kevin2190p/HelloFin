@@ -85,7 +85,7 @@ Is this a scam/phishing attempt? Provide your analysis as JSON."""
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "qwen-qwq-32b",  # Qwen3 on Groq
+                    "model": "llama3-70b-8192",  # More stable Llama 3 model
                     "messages": [
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": user_message},
