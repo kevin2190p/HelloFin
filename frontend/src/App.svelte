@@ -365,7 +365,7 @@
       </div>
     </div>
   {:else}
-    <!-- Alert Dashboard (Original Logic) -->
+    <!-- Alert Dashboard with Two Distinct UI Blocks -->
     <div class="stats">
       <div class="stat-card">
         <div class="stat-icon">📡</div>
@@ -396,83 +396,114 @@
 
     {#if pendingAlerts.length === 0 && resolvedAlerts.length === 0}
       <div class="empty">Waiting for live messages to scan... 📡</div>
-    {/if}
-
-    {#if pendingAlerts.length > 0}
-      <div class="section-title">🚨 Pending Review</div>
-      {#each pendingAlerts as a (a.txn_id)}
-        <div class="alert-card">
-          <div class="a-score-ring"><span>{a.risk_score}</span></div>
-          <div class="a-body">
-            <div class="a-top">
-              <span class="a-tag">CRITICAL</span><span class="a-timer"
-                >⏱ {countdown(a.timestamp)}</span
-              >
+    {:else}
+      <!-- Two Column Layout for Pending and Resolved Alerts -->
+      <div class="dashboard-grid">
+        <!-- Pending Alerts Block -->
+        <div class="alert-block pending-block">
+          <div class="block-header">
+            <div class="block-title">
+              <span class="block-icon">🚨</span>
+              <span>Pending Review</span>
+              <span class="block-count">{pendingAlerts.length}</span>
             </div>
-            <div class="a-row">
-              <span>From</span><span>{a.sender_phone}</span>
-            </div>
-            <div class="a-row">
-              <span>Amount</span><span
-                >RM {a.transaction_amount?.toLocaleString("en-MY", {
-                  minimumFractionDigits: 2,
-                })}</span
-              >
-            </div>
-            <div class="a-row">
-              <span>Reason</span><span class="a-reason">{a.reason}</span>
-            </div>
-            {#if a.gemini_reason}
-              <div class="a-row ai-logic-row">
-                <span>AI LOGIC</span><span class="a-reason ai-logic-txt"
-                  >{a.gemini_reason}</span
-                >
-              </div>
-            {/if}
-            <div class="a-actions">
-              <button class="btn-block" on:click={() => handleCancel(a.txn_id)}
-                >🚫 Block & Cancel</button
-              >
-              <button
-                class="btn-approve"
-                on:click={() => handleApprove(a.txn_id)}>✅ Approve</button
-              >
-            </div>
+            <div class="block-subtitle">Requires immediate action</div>
           </div>
+          
+          {#if pendingAlerts.length === 0}
+            <div class="block-empty">No pending alerts ✅</div>
+          {:else}
+            <div class="alerts-list">
+              {#each pendingAlerts as a (a.txn_id)}
+                <div class="alert-card">
+                  <div class="a-score-ring"><span>{a.risk_score}</span></div>
+                  <div class="a-body">
+                    <div class="a-top">
+                      <span class="a-tag">CRITICAL</span><span class="a-timer"
+                        >⏱ {countdown(a.timestamp)}</span
+                      >
+                    </div>
+                    <div class="a-row">
+                      <span>From</span><span>{a.sender_phone}</span>
+                    </div>
+                    <div class="a-row">
+                      <span>Amount</span><span
+                        >RM {a.transaction_amount?.toLocaleString("en-MY", {
+                          minimumFractionDigits: 2,
+                        })}</span
+                      >
+                    </div>
+                    <div class="a-row">
+                      <span>Reason</span><span class="a-reason">{a.reason}</span>
+                    </div>
+                    {#if a.gemini_reason}
+                      <div class="a-row ai-logic-row">
+                        <span>AI LOGIC</span><span class="a-reason ai-logic-txt"
+                          >{a.gemini_reason}</span
+                        >
+                      </div>
+                    {/if}
+                    <div class="a-actions">
+                      <button class="btn-block" on:click={() => handleCancel(a.txn_id)}
+                        >🚫 Block & Cancel</button
+                      >
+                      <button
+                        class="btn-approve"
+                        on:click={() => handleApprove(a.txn_id)}>✅ Approve</button
+                      >
+                    </div>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {/if}
         </div>
-      {/each}
-    {/if}
 
-    {#if resolvedAlerts.length > 0}
-      <div class="section-title" style="margin-top:24px">
-        📋 Recently Scanned
+        <!-- Resolved Alerts Block -->
+        <div class="alert-block resolved-block">
+          <div class="block-header">
+            <div class="block-title">
+              <span class="block-icon">📋</span>
+              <span>Resolved</span>
+              <span class="block-count">{resolvedAlerts.length}</span>
+            </div>
+            <div class="block-subtitle">Recently processed alerts</div>
+          </div>
+          
+          {#if resolvedAlerts.length === 0}
+            <div class="block-empty">No resolved alerts yet</div>
+          {:else}
+            <div class="alerts-list">
+              {#each resolvedAlerts as a (a.txn_id)}
+                <div class="alert-card card-safe">
+                  <div class="a-score-ring"><span>{a.risk_score}</span></div>
+                  <div class="a-body">
+                    <div class="a-top">
+                      <span class="a-tag">{a.status.toUpperCase()}</span>
+                      <span class="a-timer"
+                        >{new Date(a.timestamp * 1000).toLocaleTimeString()}</span
+                      >
+                    </div>
+                    <div class="a-row">
+                      <span>Sender</span><span>{a.sender_phone}</span>
+                    </div>
+                    <div class="a-row">
+                      <span>Reason</span><span class="a-reason">{a.reason}</span>
+                    </div>
+                    {#if a.gemini_reason}
+                      <div class="a-row ai-logic-row">
+                        <span>AI LOGIC</span><span class="a-reason ai-logic-txt"
+                          >{a.gemini_reason}</span
+                        >
+                      </div>
+                    {/if}
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
       </div>
-      {#each resolvedAlerts as a (a.txn_id)}
-        <div class="alert-card card-safe">
-          <div class="a-score-ring"><span>{a.risk_score}</span></div>
-          <div class="a-body">
-            <div class="a-top">
-              <span class="a-tag">{a.status.toUpperCase()}</span>
-              <span class="a-timer"
-                >{new Date(a.timestamp * 1000).toLocaleTimeString()}</span
-              >
-            </div>
-            <div class="a-row">
-              <span>Sender</span><span>{a.sender_phone}</span>
-            </div>
-            <div class="a-row">
-              <span>Reason</span><span class="a-reason">{a.reason}</span>
-            </div>
-            {#if a.gemini_reason}
-              <div class="a-row ai-logic-row">
-                <span>AI LOGIC</span><span class="a-reason ai-logic-txt"
-                  >{a.gemini_reason}</span
-                >
-              </div>
-            {/if}
-          </div>
-        </div>
-      {/each}
     {/if}
   {/if}
 
@@ -750,6 +781,109 @@
     display: flex;
     gap: 8px;
     margin-top: 14px;
+  }
+
+  /* Dashboard Grid Layout */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 24px;
+  }
+
+  /* Alert Blocks */
+  .alert-block {
+    background: rgba(30, 42, 50, 0.4);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+  }
+
+  .pending-block {
+    border-color: rgba(220, 38, 38, 0.2);
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.05);
+  }
+
+  .resolved-block {
+    border-color: rgba(16, 185, 129, 0.2);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.05);
+  }
+
+  .block-header {
+    padding: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .block-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #e5e7eb;
+    margin-bottom: 4px;
+  }
+
+  .block-icon {
+    font-size: 1.2rem;
+  }
+
+  .block-count {
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.1);
+    color: #e5e7eb;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 12px;
+    min-width: 24px;
+    text-align: center;
+  }
+
+  .pending-block .block-count {
+    background: rgba(220, 38, 38, 0.2);
+    color: #f87171;
+  }
+
+  .resolved-block .block-count {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+  }
+
+  .block-subtitle {
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  .alerts-list {
+    max-height: 600px;
+    overflow-y: auto;
+    padding: 16px;
+  }
+
+  .alerts-list::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .alerts-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+  }
+
+  .block-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 0.9rem;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
   }
   .btn-block,
   .btn-approve {

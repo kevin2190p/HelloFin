@@ -105,6 +105,7 @@ async def process_message(
     
     # Merge factors
     all_factors = llm_factors
+    hf_key_present = bool(os.getenv("HUGGINGFACE_API_KEY"))
     if hf_key_present:
         all_factors.append({
             "factor": "HuggingFace Confidence",

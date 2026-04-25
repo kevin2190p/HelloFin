@@ -83,7 +83,7 @@ async def handle_telegram_update(update: dict, app):
             local_path = await download_telegram_file(file_id, token)
             # 2. Transcribe
             transcript = await transcribe_audio(local_path)
-            print(f"[DEBUG] 🎤 VOICE TRANSCRIPT: {transcript}")
+            print(f"[DEBUG] VOICE TRANSCRIPT: {transcript}")
             # 3. Analyze
             result = await process_message(
                 redis=redis,
@@ -97,7 +97,7 @@ async def handle_telegram_update(update: dict, app):
                 os.remove(local_path)
         elif text:
             # Handle Text
-            print(f"[DEBUG] 📩 TEXT MESSAGE: {text}")
+            print(f"[DEBUG] TEXT MESSAGE: {text}")
             result = await process_message(
                 redis=redis,
                 transcript=text,
@@ -141,32 +141,32 @@ async def start_telegram_polling(app):
     token = raw_token.strip().replace("\n", "").replace("\r", "")
     
     if not token or "REPLACE" in token:
-        print("[DEBUG] ❌ Telegram Token is MISSING or default. Check .env!")
+        print("[DEBUG] Telegram Token is MISSING or default. Check .env!")
         return
 
     # 1. Verify Connection with getMe
-    print(f"[DEBUG] 🔍 Testing connection to Telegram for Bot Token: {token[:10]}...")
+    print(f"[DEBUG] Testing connection to Telegram for Bot Token: {token[:10]}...")
     try:
         async with httpx.AsyncClient() as client:
             test_resp = await client.get(f"{TELEGRAM_API_URL}{token}/getMe")
             if test_resp.status_code == 200:
                 bot_info = test_resp.json()
                 bot_name = bot_info["result"]["first_name"]
-                print(f"[DEBUG] ✅ SUCCESS: Connected to Telegram Bot: @{bot_info['result']['username']} ({bot_name})")
+                print(f"[DEBUG] SUCCESS: Connected to Telegram Bot: @{bot_info['result']['username']} ({bot_name})")
             else:
-                print(f"[DEBUG] ❌ FAILED: Telegram API returned {test_resp.status_code}. Your token might be wrong.")
+                print(f"[DEBUG] FAILED: Telegram API returned {test_resp.status_code}. Your token might be wrong.")
                 return
 
             # 2. Clear any existing webhook
-            print("[DEBUG] 🧹 Clearing old Webhooks to enable polling...")
+            print("[DEBUG] Clearing old Webhooks to enable polling...")
             await client.get(f"{TELEGRAM_API_URL}{token}/deleteWebhook")
     except Exception as e:
-        print(f"[DEBUG] ❌ FAILED to connect to Telegram: {e}")
+        print(f"[DEBUG] FAILED to connect to Telegram: {e}")
         return
 
     url = f"https://api.telegram.org/bot{token}/getUpdates"
     offset = 0
-    print("[DEBUG] 👂 Bot is now LISTENING for messages...")
+    print("[DEBUG] Bot is now LISTENING for messages...")
 
     while True:
         try:
@@ -182,7 +182,7 @@ async def start_telegram_polling(app):
                     data = resp.json()
                     results = data.get("result", [])
                     if results:
-                        print(f"[DEBUG] 🔥 RECEIVED {len(results)} NEW MESSAGES!")
+                        print(f"[DEBUG] RECEIVED {len(results)} NEW MESSAGES!")
                         
                     for update in results:
                         offset = update["update_id"] + 1
@@ -214,7 +214,7 @@ async def send_telegram_reply(chat_id: int, text: str, bot_token: str):
                 json={"chat_id": chat_id, "text": text}
             )
             if resp.status_code != 200:
-                print(f"[DEBUG] ❌ Telegram Reply FAILED: {resp.status_code} - {resp.text}")
+                print(f"[DEBUG] Telegram Reply FAILED: {resp.status_code} - {resp.text}")
             resp.raise_for_status()
         except Exception as e:
             logger.error("telegram_reply_failed", error=str(e))

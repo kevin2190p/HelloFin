@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 # Force load .env from current directory
 load_dotenv(override=True)
-print(f"🚀 SERVER STARTING | GROQ_KEY: {os.getenv('GROQ_API_KEY', '')[:10]}...{os.getenv('GROQ_API_KEY', '')[-4:]}")
+print(f"SERVER STARTING | GROQ_KEY: {os.getenv('GROQ_API_KEY', '')[:10]}...{os.getenv('GROQ_API_KEY', '')[-4:]}")
 
 import redis.asyncio as aioredis
 import structlog
