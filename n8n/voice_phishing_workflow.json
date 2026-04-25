@@ -1,27 +1,27 @@
 {
-  "name": "HelloFin – Voice Note to Risk Engine",
+  "name": "HelloFin – OpenClaw Voice Phishing Pipeline",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "whatsapp",
+        "path": "openclaw-voice",
         "responseMode": "onReceived",
         "responseCode": 200,
         "options": {}
       },
-      "id": "a1b2c3d4-0001-4000-8000-000000000001",
-      "name": "WhatsApp Webhook",
+      "id": "n1-webhook",
+      "name": "OpenClaw Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
       "position": [200, 340],
-      "webhookId": "hellofin-wa-hook"
+      "webhookId": "openclaw-voice"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Extract first audio message from Meta webhook payload\nconst body = $input.first().json.body || $input.first().json;\nconst entry = body.entry?.[0];\nconst change = entry?.changes?.[0];\nconst value = change?.value;\nconst msg = value?.messages?.[0];\n\nif (!msg) {\n  return [{ json: { _skip: true, reason: 'No message in payload (status update?)' } }];\n}\n\nreturn [{\n  json: {\n    _skip: false,\n    message_type: msg.type,\n    media_id: msg.audio?.id || msg.voice?.id || null,\n    sender_phone: msg.from,\n    timestamp: msg.timestamp,\n    message_id: msg.id,\n    phone_number_id: value.metadata?.phone_number_id\n  }\n}];"
+        "jsCode": "// Extract data from OpenClaw webhook\nconst item = $input.first().json;\nconst body = item.body || item;\n\nconst messageType = body.message_type || 'unknown';\nconst sender = body.sender_phone || 'unknown';\nconst timestamp = body.timestamp || Date.now().toString();\nconst pushName = body.push_name || 'Unknown';\nconst text = body.text || '';\nconst duration = body.duration || 0;\n\n// Check if this is a voice note (has binary data)\nconst hasBinary = Object.keys($input.first().binary || {}).length > 0;\n\nconsole.log(`[HelloFin] Message from +${sender} (${pushName})`);\nconsole.log(`[HelloFin] Type: ${messageType}, Has Audio: ${hasBinary}`);\n\nreturn [{\n  json: {\n    message_type: messageType,\n    sender_phone: sender,\n    timestamp,\n    push_name: pushName,\n    text,\n    duration,\n    has_audio: hasBinary\n  },\n  binary: $input.first().binary\n}];"
       },
-      "id": "a1b2c3d4-0001-4000-8000-000000000002",
+      "id": "n2-extract",
       "name": "Extract Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -31,78 +31,31 @@
       "parameters": {
         "conditions": {
           "options": { "caseSensitive": false },
-          "combinator": "and",
+          "combinator": "or",
           "conditions": [
             {
               "leftValue": "={{ $json.message_type }}",
-              "rightValue": "audio",
+              "rightValue": "voice",
               "operator": { "type": "string", "operation": "equals" }
             },
             {
-              "leftValue": "={{ $json._skip }}",
-              "rightValue": false,
+              "leftValue": "={{ $json.has_audio }}",
+              "rightValue": true,
               "operator": { "type": "boolean", "operation": "equals" }
             }
           ]
         }
       },
-      "id": "a1b2c3d4-0001-4000-8000-000000000003",
-      "name": "Is Audio?",
+      "id": "n3-check-type",
+      "name": "Voice or Text?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [640, 340]
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "=https://graph.facebook.com/v18.0/{{ $json.media_id }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {
-          "timeout": 30000
-        }
-      },
-      "id": "a1b2c3d4-0001-4000-8000-000000000004",
-      "name": "Get Media URL",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [880, 240],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "meta-wa-token",
-          "name": "Meta WhatsApp Token"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "method": "GET",
-        "url": "={{ $json.url }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {
-          "response": {
-            "response": { "responseFormat": "file" }
-          },
-          "timeout": 60000
-        }
-      },
-      "id": "a1b2c3d4-0001-4000-8000-000000000005",
-      "name": "Download Audio",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1100, 240],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "meta-wa-token",
-          "name": "Meta WhatsApp Token"
-        }
-      }
-    },
-    {
-      "parameters": {
         "method": "POST",
-        "url": "http://jane-backend:8000/webhook/whatsapp-voice",
+        "url": "http://localhost:8000/webhook/whatsapp-voice",
         "sendBody": true,
         "contentType": "multipart-form-data",
         "bodyParameters": {
@@ -115,7 +68,7 @@
             {
               "parameterType": "formData",
               "name": "sender_phone",
-              "value": "={{ $('Extract Message').item.json.sender_phone }}"
+              "value": "={{ $json.sender_phone }}"
             },
             {
               "parameterType": "formData",
@@ -133,42 +86,102 @@
           "timeout": 120000
         }
       },
-      "id": "a1b2c3d4-0001-4000-8000-000000000006",
-      "name": "Forward to Jane",
+      "id": "n4-forward-voice",
+      "name": "Forward Voice to Jane",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, 240],
+      "position": [880, 240],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 2000
     },
     {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/risk/score",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"transcript\": \"{{ $json.text }}\",\n  \"caller_number\": \"{{ $json.sender_phone }}\",\n  \"is_new_payee\": false,\n  \"transaction_amount\": 0\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "n5-forward-text",
+      "name": "Score Text via Jane",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 460],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.risk_score }}",
+              "rightValue": 80,
+              "operator": { "type": "number", "operation": "gte" }
+            }
+          ]
+        }
+      },
+      "id": "n6-risk-check",
+      "name": "High Risk?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1100, 340]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/tng/hold",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"txn_id\": \"{{ $json.txn_id || $json.request_id || 'txn-' + Date.now() }}\",\n  \"risk_score\": {{ $json.risk_score }},\n  \"sender_phone\": \"{{ $json.sender_phone || 'unknown' }}\",\n  \"transaction_amount\": 0,\n  \"reason\": \"Voice phishing detected by OpenClaw + n8n\"\n}",
+        "options": {}
+      },
+      "id": "n7-hold",
+      "name": "Trigger Hold (Shawn)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 240]
+    },
+    {
       "parameters": {},
-      "id": "a1b2c3d4-0001-4000-8000-000000000007",
-      "name": "Skip (Not Audio)",
+      "id": "n8-low-risk",
+      "name": "Low Risk (Pass)",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [880, 460]
+      "position": [1320, 460]
     }
   ],
   "connections": {
-    "WhatsApp Webhook": {
+    "OpenClaw Webhook": {
       "main": [[{ "node": "Extract Message", "type": "main", "index": 0 }]]
     },
     "Extract Message": {
-      "main": [[{ "node": "Is Audio?", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Voice or Text?", "type": "main", "index": 0 }]]
     },
-    "Is Audio?": {
+    "Voice or Text?": {
       "main": [
-        [{ "node": "Get Media URL", "type": "main", "index": 0 }],
-        [{ "node": "Skip (Not Audio)", "type": "main", "index": 0 }]
+        [{ "node": "Forward Voice to Jane", "type": "main", "index": 0 }],
+        [{ "node": "Score Text via Jane", "type": "main", "index": 0 }]
       ]
     },
-    "Get Media URL": {
-      "main": [[{ "node": "Download Audio", "type": "main", "index": 0 }]]
+    "Forward Voice to Jane": {
+      "main": [[{ "node": "High Risk?", "type": "main", "index": 0 }]]
     },
-    "Download Audio": {
-      "main": [[{ "node": "Forward to Jane", "type": "main", "index": 0 }]]
+    "Score Text via Jane": {
+      "main": [[{ "node": "High Risk?", "type": "main", "index": 0 }]]
+    },
+    "High Risk?": {
+      "main": [
+        [{ "node": "Trigger Hold (Shawn)", "type": "main", "index": 0 }],
+        [{ "node": "Low Risk (Pass)", "type": "main", "index": 0 }]
+      ]
     }
   },
   "active": false,
