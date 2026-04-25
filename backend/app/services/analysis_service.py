@@ -11,6 +11,8 @@ from app.models.schemas import WebhookResponse, TransactionRecord
 
 logger = structlog.get_logger("hellofin.analysis")
 
+from app.services.gemini_analyzer import get_gemini_explanation, analyze_risk_with_gemini
+
 async def process_message(
     redis,
     transcript: str,
@@ -22,7 +24,7 @@ async def process_message(
 ) -> WebhookResponse:
     """
     Unified analysis engine for WhatsApp, Telegram, etc.
-    Fuses keyword scoring and LLM analysis.
+    Fuses keyword scoring and multiple LLM layers (Groq, Gemini, HuggingFace).
     """
     if not txn_id:
         txn_id = str(uuid.uuid4())
@@ -39,7 +41,7 @@ async def process_message(
     if not translated_text:
         translated_text = transcript
 
-    # Layer 1: Groq LLM Analysis (Llama 3.1 70B)
+    # Layer 1: Groq LLM Analysis (Llama 3.3 70B)
     try:
         llm_result = await analyze_with_qwen(
             text=translated_text,
@@ -50,8 +52,19 @@ async def process_message(
         llm_result = {"risk_score": 0, "confidence": 0, "risk_factors": []}
     
     llm_score = llm_result.get("risk_score", 0)
-    llm_confidence = llm_result.get("confidence", 0)
     llm_factors = llm_result.get("risk_factors", [])
+
+    # Layer 2: Gemini 1.5 Flash Analysis
+    try:
+        gemini_result = await analyze_risk_with_gemini(
+            text=translated_text,
+            sender_phone=sender_phone,
+        )
+    except Exception as e:
+        logger.error("gemini_analysis_failed", error=str(e))
+        gemini_result = {"risk_score": 0, "confidence": 0}
+    
+    gemini_score = gemini_result.get("risk_score", 0)
 
     # Layer 3: HuggingFace specialized classification
     try:
@@ -62,21 +75,12 @@ async def process_message(
         
     hf_score = int(hf_prob * 100)
     
-    # Pure AI Fusion: 70% LLM (Groq), 30% HuggingFace
-    hf_key_present = hf_score > 0
-    llm_key_present = llm_score > 0 and llm_result.get("confidence", 0) > 0
+    # --- AI FUSION ENGINE (3-Way Multi-LLM Consensus) ---
+    # Weighting: 50% Groq (Llama), 30% Gemini, 20% HuggingFace (BERT)
+    final_score = int((llm_score * 0.5) + (gemini_score * 0.3) + (hf_score * 0.2))
     
-    if llm_key_present and hf_key_present:
-        final_score = int((llm_score * 0.7) + (hf_score * 0.3))
-        logger.info("ai_fusion_active", mode="LLM+HF")
-    elif llm_key_present:
-        final_score = llm_score
-        logger.info("ai_fusion_active", mode="LLM Only")
-    elif hf_key_present:
-        final_score = hf_score
-        logger.info("ai_fusion_active", mode="HF Only")
-    else:
-        # If AI fails, fallback to Keywords
+    if final_score == 0:
+        # If AI returns nothing, fallback to Keywords
         keyword_result = calculate_risk_score(
             transcript=transcript,
             caller_number=sender_phone,
@@ -85,9 +89,19 @@ async def process_message(
         )
         final_score = keyword_result["risk_score"]
         llm_factors = keyword_result["risk_factors"]
-        logger.warning("ai_fusion_inactive", reason="AI models returned 0 or failed. Falling back to Keywords.")
+        logger.warning("ai_fusion_inactive", reason="AI models returned 0. Falling back to Keywords.")
+    else:
+        logger.info("ai_fusion_active", groq=llm_score, gemini=gemini_score, hf=hf_score, final=final_score)
     
     final_score = min(100, max(0, final_score))
+
+    # --- GEMINI LOGICAL EXPLANATION ---
+    try:
+        gemini_reason = await get_gemini_explanation(translated_text, final_score)
+        logger.info("gemini_explanation_generated", reason=gemini_reason)
+    except Exception as e:
+        logger.error("gemini_explanation_failed", error=str(e))
+        gemini_reason = gemini_result.get("explanation") or "Analysis completed by AI Consensus engine."
     
     # Merge factors
     all_factors = llm_factors
@@ -128,6 +142,7 @@ async def process_message(
         transaction_amount=transaction_amount,
         status=status,
         timestamp=timestamp,
+        gemini_reason=gemini_reason
     )
 
     await redis.hset(f"txn:{txn_id}", mapping=record.model_dump_redis())
@@ -138,7 +153,7 @@ async def process_message(
         "risk_score": final_score,
         "sender_phone": sender_phone,
         "transaction_amount": transaction_amount,
-        "reason": f"{message_type.replace('_', ' ').title()}: {llm_result.get('scam_type', 'Suspicious message')}",
+        "reason": gemini_reason, # Use Gemini reason for the dashboard alert
         "timestamp": timestamp,
         "status": status,  # "held" or "cleared"
         "transcript": transcript,
@@ -162,4 +177,5 @@ async def process_message(
         risk_factors=all_factors,
         status=status,
         auto_cancel_after_sec=600 if status == "held" else None,
+        gemini_reason=gemini_reason
     )

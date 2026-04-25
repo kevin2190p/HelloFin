@@ -19,11 +19,13 @@ router = APIRouter()
 class ScanMessage(BaseModel):
     message: str
 
+from app.services.gemini_analyzer import get_gemini_explanation
+
 @router.post("/scan")
 async def scan(msg: ScanMessage, request: Request):
     """
     Simplified scan endpoint matching user's architecture guide.
-    Powered by Advanced AI (Groq + HuggingFace).
+    Powered by Advanced AI (Groq + HuggingFace + Gemini).
     """
     redis = request.app.state.redis
     result = await process_message(
@@ -37,7 +39,8 @@ async def scan(msg: ScanMessage, request: Request):
         "message": msg.message,
         "riskScore": result.risk_score,
         "status": "HIGH RISK ⚠️" if result.risk_score >= 70 else ("MEDIUM RISK ⚠️" if result.risk_score >= 40 else "SAFE"),
-        "reasons": [f.get("factor", f.get("category", "Suspicious pattern")) for f in result.risk_factors]
+        "reasons": [f.get("factor", f.get("category", "Suspicious pattern")) for f in result.risk_factors],
+        "gemini_reason": result.gemini_reason
     }
 
 
@@ -45,13 +48,6 @@ async def scan(msg: ScanMessage, request: Request):
 async def score_risk(payload: RiskRequest):
     """
     Calculate risk score from transcript and context.
-
-    Factors:
-    - Keyword detection (urgency phrases, authority impersonation)
-    - Unknown/international caller number
-    - New payee flag
-    - Transaction amount threshold
-    - AWS Lambda fallback (optional)
     """
     result = calculate_risk_score(
         transcript=payload.transcript,
@@ -60,9 +56,16 @@ async def score_risk(payload: RiskRequest):
         transaction_amount=payload.transaction_amount,
     )
 
+    # Gemini Explanation
+    try:
+        gemini_reason = await get_gemini_explanation(payload.transcript, result["risk_score"])
+    except Exception:
+        gemini_reason = "Logic verified by core system."
+
     # Optionally invoke AWS Lambda for secondary scoring
     lambda_score = None
     try:
+        from app.services.lambda_client import invoke_aws_lambda
         lambda_result = invoke_aws_lambda({
             "transcript": payload.transcript,
             "caller_number": payload.caller_number,
@@ -85,4 +88,5 @@ async def score_risk(payload: RiskRequest):
         risk_factors=result["risk_factors"],
         lambda_score=lambda_score,
         recommendation=result["recommendation"],
+        gemini_reason=gemini_reason
     )

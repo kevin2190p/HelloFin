@@ -6,7 +6,9 @@
     handleCancel,
     formatTime,
   } from "./lib/caregiverDashboard.js";
-  import { healthCheck } from "./lib/api.js";
+  import { healthCheck, scoreRisk } from "./lib/api.js";
+  import WhatsAppWidget from "./lib/WhatsAppWidget.svelte";
+
   let alerts = [],
     error = null,
     stopPolling,
@@ -14,9 +16,239 @@
     now = Date.now(),
     actionLoading = {},
     actionResult = {};
-  let activeTab = "dashboard";
 
+  let activeTab = "monitor"; // Default to monitor based on images
   let ticker;
+
+  // --- Scenario Simulation Logic ---
+  let selectedScenario = null;
+  let chatMessages = [];
+  let isTyping = false;
+  let currentContact = { name: "Unknown", avatar: "" };
+
+  const SCENARIOS = [
+    {
+      id: "insta",
+      name: "Instagram Verification",
+      type: "Phishing",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Instagram",
+      contact: "Instagram Support",
+      flow: [
+        {
+          from: "them",
+          text: "02172269 is your verification code. Enter this code in the Instagram app to verify your account. For your security, do not share this code. Instagram will never ask you to share this code by phone call or email.",
+          risk_score: 30,
+        },
+        { from: "me", text: "Hmm I didn't request any code... who is this?" },
+        {
+          from: "them",
+          text: "This is Instagram support. Your account has been flagged for suspicious activity. Please share the code now or your account will be permanently disabled within 1 hour.",
+          risk_score: 82,
+        },
+        {
+          from: "me",
+          text: "Wait, Instagram wouldn't message me on WhatsApp right? This is suspicious...",
+        },
+      ],
+    },
+    {
+      id: "macau",
+      name: "Sgt. Michael – Macau Scam",
+      type: "Police Scam",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Michael",
+      contact: "Sgt. Michael (PDRM)",
+      flow: [
+        {
+          from: "them",
+          text: "Saya Sarjan Michael dari IPD Bukit Aman. Nama anda telah dikaitkan dengan kes pengubahan wang haram bernilai RM200,000.",
+          risk_score: 45,
+        },
+        {
+          from: "me",
+          text: "Hah? Biar betul? Saya tak pernah buat macam tu pun.",
+        },
+        {
+          from: "them",
+          text: "Waran tangkap telah dikeluarkan. Jangan beritahu sesiapa atau akaun bank anda akan dibekukan serta-merta untuk siasatan.",
+          risk_score: 92,
+        },
+        {
+          from: "me",
+          text: "Tolong jangan bekukan akaun saya, itu duit simpanan saya!",
+        },
+      ],
+    },
+    {
+      id: "friend",
+      name: "Fake Friend – Phone Rosak",
+      type: "Emergency Scam",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Friend",
+      contact: "Old Friend",
+      flow: [
+        {
+          from: "them",
+          text: "Wei, ni aku. Phone lama aku pecah/rosak, ni no baru aku. Save no ni jap.",
+          risk_score: 25,
+        },
+        { from: "me", text: "Oh ye ke? Sape ni? Ali ke?" },
+        {
+          from: "them",
+          text: "Haah Ali la ni. Weh, aku tgh kat bengkel ni, urgent gila nak bayar tapi bank app aku takleh masuk kat phone ni. Boleh pinjam RM500 tak? Malam nanti aku bayar balik.",
+          risk_score: 75,
+        },
+      ],
+    },
+    {
+      id: "voice",
+      name: "Deepfake Voice – Help Me",
+      type: "Family Scam",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Family",
+      contact: "Family Member",
+      flow: [
+        {
+          from: "them",
+          type: "voice",
+          text: "Mak, tolong mak! Orang tangkap saya!",
+          transcript: "Mak, tolong mak! Orang tangkap saya! Saya kena culik!",
+          duration: 12,
+          risk_score: 88,
+        },
+        { from: "me", text: "Ya Allah! Sape ni? Adik ke?" },
+        {
+          from: "them",
+          text: "Jangan call polis! Kalau mak call polis, kitorang bunuh dia. Transfer RM10k sekarang ke akaun ni kalau nak dia selamat.",
+          risk_score: 98,
+        },
+      ],
+    },
+    {
+      id: "lhdn",
+      name: "Bank Negara / LHDN",
+      type: "Authority Scam",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Tax",
+      contact: "Official LHDN",
+      flow: [
+        {
+          from: "them",
+          text: "Notis Peringatan Akhir: Anda mempunyai tunggakan cukai berjumlah RM5,430.20 yang belum dijelaskan bagi tahun taksiran 2023.",
+          risk_score: 35,
+        },
+        { from: "me", text: "Tapi saya dah bayar semua cukai saya." },
+        {
+          from: "them",
+          text: "Sila klik pautan ini untuk pengesahan bayaran atau tindakan undang-undang akan diambil dalam masa 24 jam: http://lhdn-portal-safe.com/verify",
+          risk_score: 85,
+        },
+      ],
+    },
+    {
+      id: "parcel",
+      name: "COD Parcel Scam",
+      type: "Parcel Scam",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Parcel",
+      contact: "NinjaVan Delivery",
+      flow: [
+        {
+          from: "them",
+          text: "Hello, saya runner NinjaVan. Ada barang COD RM180 untuk alamat ni. Tuan/puan ada kat rumah?",
+          risk_score: 20,
+        },
+        { from: "me", text: "Barang apa ya? Saya tak rasa ada order apa-apa." },
+        {
+          from: "them",
+          text: "Kat sini tulis barang dari 'Overseas Gadget'. Kalau tak bayar sekarang, kitorang kena return. Bagus bayar je, ramai orang beli benda ni.",
+          risk_score: 55,
+        },
+      ],
+    },
+    {
+      id: "job",
+      name: "Fake Job – WFH RM8K",
+      type: "Job Scam",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Job",
+      contact: "HR Manager",
+      flow: [
+        {
+          from: "them",
+          text: "Tahniah! Resume anda telah terpilih untuk jawatan Data Entry (WFH). Gaji RM300-RM500 sehari. Berminat?",
+          risk_score: 30,
+        },
+        { from: "me", text: "Ya, berminat. Macam mana nak mula?" },
+        {
+          from: "them",
+          text: "Anda cuma perlu beli inventory dulu untuk start task. Masukkan RM200 ke akaun company untuk aktifkan portal kerja anda.",
+          risk_score: 70,
+        },
+      ],
+    },
+  ];
+
+  async function runScenario(scenario) {
+    selectedScenario = scenario;
+    currentContact = { name: scenario.contact, avatar: scenario.avatar };
+    chatMessages = [];
+
+    for (const step of scenario.flow) {
+      if (step.from === "them") {
+        isTyping = true;
+        await new Promise((r) => setTimeout(r, 1000));
+
+        let newMsg = {
+          id: Date.now(),
+          from: "them",
+          text: step.text,
+          type: step.type || "text",
+          transcript: step.transcript,
+          duration: step.duration,
+          time: new Date()
+            .toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            })
+            .toLowerCase(),
+          scanning: true,
+        };
+        chatMessages = [...chatMessages, newMsg];
+
+        // Simulate AI Analysis
+        await new Promise((r) => setTimeout(r, 1500));
+
+        // Real-time API call for scanning (Optional, here we use preset scores for demo but could call backend)
+        const scanResult = await scoreRisk({ transcript: step.text }).catch(
+          () => null,
+        );
+        const finalScore = scanResult ? scanResult.risk_score : step.risk_score;
+
+        chatMessages = chatMessages.map((m) =>
+          m.id === newMsg.id
+            ? { ...m, scanning: false, risk_score: finalScore }
+            : m,
+        );
+        isTyping = false;
+      } else {
+        await new Promise((r) => setTimeout(r, 800));
+        chatMessages = [
+          ...chatMessages,
+          {
+            id: Date.now(),
+            from: "me",
+            text: step.text,
+            time: new Date()
+              .toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })
+              .toLowerCase(),
+          },
+        ];
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+
+  // --- Caregiver Dashboard Logic ---
   onMount(() => {
     stopPolling = startPolling((d, e) => {
       if (d) alerts = d;
@@ -41,16 +273,7 @@
       ? "EXPIRED"
       : `${Math.floor(d / 60)}:${(d % 60).toString().padStart(2, "0")}`;
   }
-  function onApprove(id) {
-    alerts = alerts.map((a) =>
-      a.txn_id === id ? { ...a, status: "approved" } : a,
-    );
-  }
-  function onCancel(id) {
-    alerts = alerts.map((a) =>
-      a.txn_id === id ? { ...a, status: "cancelled" } : a,
-    );
-  }
+
   $: pendingAlerts = alerts.filter(
     (a) => a.status === "held" || a.status === "pending",
   );
@@ -87,178 +310,170 @@
     </div>
   </header>
 
-  <div class="stats">
-    <div class="stat-card">
-      <div class="stat-icon">📡</div>
-      <span class="stat-n" style="font-size: 1rem; color: {backendOnline ? '#10B981' : '#EF4444'}">
-        {backendOnline ? 'LIVE' : 'OFFLINE'}
-      </span>
-      <span class="stat-l">Backend</span>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">🕒</div>
-      <span class="stat-n" style="font-size: 0.9rem">{new Date(now).toLocaleTimeString()}</span>
-      <span class="stat-l">Clock</span>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">📊</div>
-      <span class="stat-n">{alerts.length}</span><span class="stat-l">Total</span>
-    </div>
-    <div class="stat-card warn">
-      <div class="stat-icon">🚨</div>
-      <span class="stat-n">{pendingAlerts.length}</span><span class="stat-l">Pending</span>
-    </div>
+  <div class="nav-tabs">
+    <button
+      class:active={activeTab === "monitor"}
+      on:click={() => (activeTab = "monitor")}
+    >
+      <span class="tab-icon">✅</span> WhatsApp Monitor
+    </button>
+    <button
+      class:active={activeTab === "dashboard"}
+      on:click={() => (activeTab = "dashboard")}
+    >
+      <span class="tab-icon">🔔</span> Alert Dashboard
+      {#if pendingAlerts.length > 0}<span class="tab-badge"
+          >{pendingAlerts.length}</span
+        >{/if}
+    </button>
   </div>
-  {#if pendingAlerts.length === 0 && resolvedAlerts.length === 0}
-    <div class="empty">Waiting for live Telegram messages... 📡</div>
-  {/if}
-  {#if pendingAlerts.length > 0}
-    <div class="section-title">🚨 Pending Review</div>
-    {#each pendingAlerts as a (a.txn_id)}
-      <div class="alert-card">
-        <div class="a-score-ring"><span>{a.risk_score}</span></div>
-        <div class="a-body">
-          <div class="a-top">
-            <span class="a-tag">CRITICAL</span><span class="a-timer"
-              >⏱ {countdown(a.timestamp)}</span
-            >
-          </div>
-          <div class="a-row">
-            <span>From</span><span>{a.sender_phone}</span>
-          </div>
-          <div class="a-row">
-            <span>Amount</span><span
-              >RM {a.transaction_amount?.toLocaleString("en-MY", {
-                minimumFractionDigits: 2,
-              })}</span
-            >
-          </div>
-          <div class="a-row">
-            <span>Reason</span><span class="a-reason">{a.reason}</span>
-          </div>
 
-          {#if a.transcript}
-            <div class="a-voice-scrutiny">
-              <div class="a-scrutiny-header">
-                <svg
-                  viewBox="0 0 24 24"
-                  width="12"
-                  height="12"
-                  fill="currentColor"
-                  ><path
-                    d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"
-                  /><path
-                    d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"
-                  /></svg
-                >
-                AI Voice Transcript
+  {#if activeTab === "monitor"}
+    <div class="monitor-layout">
+      <!-- Chat Side -->
+      <div class="chat-container">
+        <WhatsAppWidget
+          messages={chatMessages}
+          contactName={currentContact.name}
+          avatarUrl={currentContact.avatar}
+        />
+      </div>
+
+      <!-- Scenarios Side -->
+      <div class="scenarios-container card glass">
+        <div class="card-title">Real-World Scam Scenario</div>
+        <div class="card-sub">
+          Select a scenario to simulate the scam conversation
+        </div>
+
+        <div class="scenario-list">
+          {#each SCENARIOS as s}
+            <button
+              class="scenario-btn"
+              class:active={selectedScenario?.id === s.id}
+              on:click={() => runScenario(s)}
+            >
+              <img src={s.avatar} alt="" class="scenario-av" />
+              <div class="scenario-info">
+                <div class="scenario-name">{s.name}</div>
+                <div class="scenario-type">{s.type}</div>
               </div>
-              <p class="a-transcript">"{a.transcript}"</p>
-
-              {#if a.translation}
-                <div class="a-translation-box">
-                  <div class="a-scrutiny-header" style="color: #A855F7">
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="12"
-                      height="12"
-                      fill="currentColor"
-                      ><path
-                        d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"
-                      /></svg
-                    >
-                    English Translation
-                  </div>
-                  <p class="a-transcript">"{a.translation}"</p>
-                </div>
-              {/if}
-            </div>
-          {/if}
-          <div class="a-actions">
-            <button class="btn-block" on:click={() => onCancel(a.txn_id)}
-              >🚫 Block & Cancel</button
-            >
-            <button class="btn-approve" on:click={() => onApprove(a.txn_id)}
-              >✅ Approve</button
-            >
-          </div>
+              <div class="scenario-arrow">▶</div>
+            </button>
+          {/each}
         </div>
       </div>
-    {/each}
-  {/if}
-  {#if resolvedAlerts.length > 0}
-    <div class="section-title" style="margin-top:24px">📋 Recently Scanned</div>
-    {#each resolvedAlerts as a (a.txn_id)}
-      <div
-        class="alert-card"
-        class:card-safe={a.status === "cleared" || a.status === "approved"}
-      >
-        <div
-          class="a-score-ring"
-          style="border-color:{a.risk_score >= 80
-            ? '#DC2626'
-            : a.risk_score >= 50
-              ? '#F59E0B'
-              : '#10B981'}"
+    </div>
+  {:else}
+    <!-- Alert Dashboard (Original Logic) -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-icon">📡</div>
+        <span
+          class="stat-n"
+          style="font-size: 1rem; color: {backendOnline
+            ? '#10B981'
+            : '#EF4444'}"
         >
-          {a.risk_score}
-        </div>
-        <div class="a-body">
-          <div class="a-top">
-            <span class="a-tag">
-              {#if a.status === "cleared"}✅ SAFE
-              {:else if a.status === "approved"}✅ APPROVED
-              {:else}🚫 CANCELLED{/if}
-            </span>
-            <span class="a-timer">{countdown(a.timestamp)}</span>
-          </div>
-          <div class="a-row">
-            <span>Sender</span><span>{a.sender_phone}</span>
-          </div>
-          <div class="a-row">
-            <span>Reason</span><span class="a-reason">{a.reason}</span>
-          </div>
-
-          {#if a.transcript}
-            <div class="a-voice-scrutiny">
-              <div class="a-scrutiny-header">
-                <svg
-                  viewBox="0 0 24 24"
-                  width="12"
-                  height="12"
-                  fill="currentColor"
-                  ><path
-                    d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"
-                  /><path
-                    d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"
-                  /></svg
-                >
-                AI Voice Transcript
-              </div>
-              <p class="a-transcript">"{a.transcript}"</p>
-
-              {#if a.translation}
-                <div class="a-translation-box">
-                  <div class="a-scrutiny-header" style="color: #A855F7">
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="12"
-                      height="12"
-                      fill="currentColor"
-                      ><path
-                        d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"
-                      /></svg
-                    >
-                    English Translation
-                  </div>
-                  <p class="a-transcript">"{a.translation}"</p>
-                </div>
-              {/if}
-            </div>
-          {/if}
-        </div>
+          {backendOnline ? "LIVE" : "OFFLINE"}
+        </span>
+        <span class="stat-l">Backend</span>
       </div>
-    {/each}
+      <div class="stat-card">
+        <div class="stat-icon">🕒</div>
+        <span class="stat-n" style="font-size: 0.9rem"
+          >{new Date(now).toLocaleTimeString()}</span
+        >
+        <span class="stat-l">Clock</span>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <span class="stat-n">{alerts.length}</span><span class="stat-l"
+          >Total</span
+        >
+      </div>
+    </div>
+
+    {#if pendingAlerts.length === 0 && resolvedAlerts.length === 0}
+      <div class="empty">Waiting for live messages to scan... 📡</div>
+    {/if}
+
+    {#if pendingAlerts.length > 0}
+      <div class="section-title">🚨 Pending Review</div>
+      {#each pendingAlerts as a (a.txn_id)}
+        <div class="alert-card">
+          <div class="a-score-ring"><span>{a.risk_score}</span></div>
+          <div class="a-body">
+            <div class="a-top">
+              <span class="a-tag">CRITICAL</span><span class="a-timer"
+                >⏱ {countdown(a.timestamp)}</span
+              >
+            </div>
+            <div class="a-row">
+              <span>From</span><span>{a.sender_phone}</span>
+            </div>
+            <div class="a-row">
+              <span>Amount</span><span
+                >RM {a.transaction_amount?.toLocaleString("en-MY", {
+                  minimumFractionDigits: 2,
+                })}</span
+              >
+            </div>
+            <div class="a-row">
+              <span>Reason</span><span class="a-reason">{a.reason}</span>
+            </div>
+            {#if a.gemini_reason}
+              <div class="a-row ai-logic-row">
+                <span>AI LOGIC</span><span class="a-reason ai-logic-txt"
+                  >{a.gemini_reason}</span
+                >
+              </div>
+            {/if}
+            <div class="a-actions">
+              <button class="btn-block" on:click={() => handleCancel(a.txn_id)}
+                >🚫 Block & Cancel</button
+              >
+              <button
+                class="btn-approve"
+                on:click={() => handleApprove(a.txn_id)}>✅ Approve</button
+              >
+            </div>
+          </div>
+        </div>
+      {/each}
+    {/if}
+
+    {#if resolvedAlerts.length > 0}
+      <div class="section-title" style="margin-top:24px">
+        📋 Recently Scanned
+      </div>
+      {#each resolvedAlerts as a (a.txn_id)}
+        <div class="alert-card card-safe">
+          <div class="a-score-ring"><span>{a.risk_score}</span></div>
+          <div class="a-body">
+            <div class="a-top">
+              <span class="a-tag">{a.status.toUpperCase()}</span>
+              <span class="a-timer"
+                >{new Date(a.timestamp * 1000).toLocaleTimeString()}</span
+              >
+            </div>
+            <div class="a-row">
+              <span>Sender</span><span>{a.sender_phone}</span>
+            </div>
+            <div class="a-row">
+              <span>Reason</span><span class="a-reason">{a.reason}</span>
+            </div>
+            {#if a.gemini_reason}
+              <div class="a-row ai-logic-row">
+                <span>AI LOGIC</span><span class="a-reason ai-logic-txt"
+                  >{a.gemini_reason}</span
+                >
+              </div>
+            {/if}
+          </div>
+        </div>
+      {/each}
+    {/if}
   {/if}
 
   <footer>Fakeout · TNG Digital FINHACK 2026</footer>
@@ -266,26 +481,27 @@
 
 <style>
   @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap");
+
   :global(*) {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
   }
   :global(body) {
-    font-family: "Inter", system-ui, sans-serif;
-    background: #121212;
+    font-family: "Inter", sans-serif;
+    background: #0b141a;
     color: #e5e7eb;
     min-height: 100vh;
   }
+
   main {
-    max-width: 1240px;
+    max-width: 1080px;
     margin: 0 auto;
-    padding: 20px 28px 60px;
+    padding: 20px 24px;
   }
 
-  /* Logo */
   header {
-    padding: 20px 0 16px;
+    padding: 10px 0 20px;
     display: flex;
     align-items: center;
   }
@@ -294,15 +510,11 @@
     align-items: center;
     gap: 12px;
   }
-  .logo-wave {
-    filter: drop-shadow(0 2px 8px rgba(20, 184, 166, 0.3));
-  }
   .logo-text {
     font-family: "Space Grotesk", sans-serif;
-    font-size: 1.6rem;
+    font-size: 1.5rem;
     font-weight: 700;
-    color: #e5e7eb;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.02em;
   }
   .logo-accent {
     background: linear-gradient(135deg, #14b8a6, #06b6d4);
@@ -311,173 +523,132 @@
   }
 
   /* Tabs */
-  .tabs {
+  .nav-tabs {
     display: flex;
-    gap: 4px;
+    gap: 12px;
     margin-bottom: 24px;
-    background: #1e2a32;
-    border-radius: 12px;
-    padding: 4px;
   }
-  .tabs button {
+  .nav-tabs button {
     flex: 1;
-    padding: 10px 16px;
-    background: none;
+    padding: 14px;
     border: none;
-    font-size: 0.82rem;
-    font-weight: 600;
+    border-radius: 12px;
+    background: rgba(30, 42, 50, 0.6);
     color: #9ca3af;
+    font-weight: 600;
     cursor: pointer;
-    border-radius: 8px;
     transition: all 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
   }
-  .tabs button:hover {
-    color: #e5e7eb;
-  }
-  .tabs button.active {
-    background: rgba(20, 184, 166, 0.15);
+  .nav-tabs button.active {
+    background: rgba(20, 184, 166, 0.1);
     color: #14b8a6;
-    box-shadow: 0 0 12px rgba(20, 184, 166, 0.1);
+    border-color: rgba(20, 184, 166, 0.3);
   }
   .tab-badge {
     background: #dc2626;
     color: #fff;
-    font-size: 0.62rem;
-    font-weight: 700;
-    padding: 1px 7px;
+    font-size: 0.65rem;
+    padding: 2px 6px;
     border-radius: 10px;
-    min-width: 18px;
-    text-align: center;
-    animation: badgePulse 2s ease-in-out infinite;
-  }
-  @keyframes badgePulse {
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
-    }
-    50% {
-      box-shadow: 0 0 0 6px rgba(220, 38, 38, 0);
-    }
+    margin-left: 4px;
   }
 
-  .wa-layout {
+  /* Monitor Layout */
+  .monitor-layout {
     display: grid;
     grid-template-columns: 420px 1fr;
     gap: 24px;
     align-items: start;
   }
-
-  /* Glass card */
-  .card {
-    background: rgba(30, 42, 50, 0.6);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 16px;
-    padding: 20px;
-  }
-  .glass {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  }
-  .card-title {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: #e5e7eb;
-    margin-bottom: 4px;
-  }
-  .card-sub {
-    font-size: 0.72rem;
-    color: #9ca3af;
-    margin-bottom: 14px;
-  }
-
-  .preset-grid {
+  .scenarios-container {
+    padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 12px;
   }
-  .preset-btn {
+  .scenario-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 560px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .scenario-list::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scenario-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+  }
+
+  .scenario-btn {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
+    gap: 14px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.03);
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 0.2s;
     text-align: left;
   }
-  .preset-btn:hover:not(:disabled) {
-    background: rgba(20, 184, 166, 0.08);
+  .scenario-btn:hover {
+    background: rgba(20, 184, 166, 0.05);
     border-color: rgba(20, 184, 166, 0.2);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    transform: translateX(4px);
   }
-  .preset-btn:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
+  .scenario-btn.active {
+    background: rgba(20, 184, 166, 0.1);
+    border-color: #14b8a6;
   }
-  .preset-av {
-    width: 36px;
-    height: 36px;
+  .scenario-av {
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
-    object-fit: cover;
-    flex-shrink: 0;
     border: 2px solid rgba(255, 255, 255, 0.1);
   }
-  .preset-info {
+  .scenario-info {
     flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
   }
-  .preset-label {
-    font-size: 0.78rem;
-    font-weight: 500;
+  .scenario-name {
+    font-size: 0.9rem;
+    font-weight: 600;
     color: #e5e7eb;
+    margin-bottom: 2px;
   }
-  .preset-cat {
-    font-size: 0.62rem;
+  .scenario-type {
+    font-size: 0.72rem;
     color: #9ca3af;
   }
-  .injecting-bar {
-    margin-top: 12px;
-    padding: 10px 14px;
-    border-radius: 10px;
-    background: rgba(20, 184, 166, 0.08);
-    border: 1px solid rgba(20, 184, 166, 0.2);
-    color: #14b8a6;
-    font-size: 0.78rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .inject-pulse {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #14b8a6;
-    animation: pulseDot 1.5s ease-in-out infinite;
-  }
-  @keyframes pulseDot {
-    0%,
-    100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.4;
-      transform: scale(0.7);
-    }
+  .scenario-arrow {
+    font-size: 0.7rem;
+    color: #4b5563;
   }
 
-  /* Dashboard */
+  /* Dashboard Styles */
+  .card {
+    background: rgba(30, 42, 50, 0.4);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #e5e7eb;
+  }
+  .card-sub {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    margin-bottom: 8px;
+  }
   .stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -485,94 +656,46 @@
     margin-bottom: 24px;
   }
   .stat-card {
-    background: rgba(30, 42, 50, 0.6);
-    backdrop-filter: blur(12px);
+    background: rgba(30, 42, 50, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 16px;
     padding: 20px;
     text-align: center;
-    position: relative;
-    overflow: hidden;
-  }
-  .stat-card::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #14b8a6, #06b6d4);
-  }
-  .stat-card.warn::after {
-    background: linear-gradient(90deg, #dc2626, #f59e0b);
-  }
-  .stat-card.ok::after {
-    background: linear-gradient(90deg, #10b981, #14b8a6);
-  }
-  .stat-icon {
-    font-size: 1.4rem;
-    margin-bottom: 4px;
   }
   .stat-n {
     display: block;
-    font-size: 2.2rem;
+    font-size: 1.8rem;
     font-weight: 800;
     font-family: "Space Grotesk", sans-serif;
   }
   .stat-l {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     color: #9ca3af;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-  .stat-card.warn .stat-n {
-    color: #dc2626;
-  }
-  .stat-card.ok .stat-n {
-    color: #10b981;
-  }
-
-  .section-title {
-    font-size: 0.9rem;
-    font-weight: 700;
-    margin-bottom: 10px;
-    color: #e5e7eb;
-  }
-  .empty {
-    background: rgba(30, 42, 50, 0.6);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 16px;
-    padding: 48px;
-    text-align: center;
-    color: #9ca3af;
-    font-size: 0.85rem;
+    letter-spacing: 0.05em;
   }
 
   .alert-card {
     display: flex;
     gap: 16px;
-    background: rgba(30, 42, 50, 0.6);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(220, 38, 38, 0.25);
+    background: rgba(30, 42, 50, 0.5);
+    border: 1px solid rgba(220, 38, 38, 0.2);
     border-radius: 16px;
     padding: 20px;
     margin-bottom: 12px;
-    box-shadow: 0 0 20px rgba(220, 38, 38, 0.05);
   }
   .a-score-ring {
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: rgba(220, 38, 38, 0.1);
+    border: 2px solid rgba(220, 38, 38, 0.3);
     flex-shrink: 0;
-    background: rgba(220, 38, 38, 0.12);
-    border: 2px solid rgba(220, 38, 38, 0.4);
   }
   .a-score-ring span {
-    font-size: 1.2rem;
     font-weight: 800;
     color: #f87171;
     font-family: "Space Grotesk", sans-serif;
@@ -583,20 +706,18 @@
   .a-top {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
   .a-tag {
-    font-size: 0.68rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    padding: 3px 10px;
-    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 4px;
     background: rgba(220, 38, 38, 0.15);
     color: #f87171;
-    letter-spacing: 0.04em;
   }
   .a-timer {
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     color: #9ca3af;
   }
   .a-row {
@@ -604,17 +725,27 @@
     justify-content: space-between;
     padding: 4px 0;
     font-size: 0.8rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   }
   .a-row span:first-child {
     color: #9ca3af;
   }
   .a-reason {
     color: #f59e0b;
-    font-size: 0.78rem;
-    max-width: 260px;
     text-align: right;
+    max-width: 300px;
   }
+  .ai-logic-row {
+    border-top: 1px dashed rgba(16, 185, 129, 0.2);
+    margin-top: 6px;
+    padding-top: 8px;
+    border-bottom: none;
+  }
+  .ai-logic-txt {
+    color: #10b981;
+    font-weight: 500;
+  }
+
   .a-actions {
     display: flex;
     gap: 8px;
@@ -624,97 +755,28 @@
   .btn-approve {
     flex: 1;
     padding: 10px;
-    border: none;
-    border-radius: 10px;
-    font-size: 0.78rem;
+    border-radius: 8px;
     font-weight: 600;
+    font-size: 0.75rem;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: 0.2s;
+    border: 1px solid transparent;
   }
   .btn-block {
-    background: rgba(220, 38, 38, 0.12);
+    background: rgba(220, 38, 38, 0.1);
     color: #f87171;
-    border: 1px solid rgba(220, 38, 38, 0.3);
-  }
-  .btn-block:hover {
-    background: rgba(220, 38, 38, 0.2);
+    border-color: rgba(220, 38, 38, 0.3);
   }
   .btn-approve {
-    background: rgba(20, 184, 166, 0.12);
-    color: #14b8a6;
-    border: 1px solid rgba(20, 184, 166, 0.3);
-  }
-  .btn-approve:hover {
-    background: rgba(20, 184, 166, 0.2);
-  }
-  .resolved-row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 12px 16px;
-    background: rgba(30, 42, 50, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    border-radius: 10px;
-    margin-bottom: 6px;
-    font-size: 0.78rem;
-    color: #9ca3af;
-  }
-  .r-stat {
-    font-weight: 700;
-    text-transform: uppercase;
-    font-size: 0.68rem;
-    min-width: 100px;
-  }
-  .r-stat.approved {
+    background: rgba(16, 185, 129, 0.1);
     color: #10b981;
-  }
-  .r-stat.cancelled {
-    color: #dc2626;
-  }
-
-  /* Voice Scrutiny Styles */
-  .a-voice-scrutiny {
-    margin-top: 14px;
-    padding: 12px;
-    background: rgba(0, 0, 0, 0.25);
-    border-radius: 10px;
-    border: 1px solid rgba(59, 130, 246, 0.2);
-  }
-  .a-scrutiny-header {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.65rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    color: #3b82f6;
-    letter-spacing: 0.05em;
-    margin-bottom: 6px;
-  }
-  .a-transcript {
-    font-size: 0.8rem;
-    color: #e5e7eb;
-    line-height: 1.4;
-    font-style: italic;
-  }
-  .a-translation-box {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-color: rgba(16, 185, 129, 0.3);
   }
 
   footer {
     text-align: center;
-    padding: 32px 0 16px;
-    color: #9ca3af;
+    padding: 40px 0;
+    color: #4b5563;
     font-size: 0.7rem;
-  }
-  @media (max-width: 900px) {
-    .wa-layout {
-      grid-template-columns: 1fr;
-    }
-    .stats {
-      grid-template-columns: 1fr;
-    }
   }
 </style>

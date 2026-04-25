@@ -1,8 +1,51 @@
-import os
+import os, json
 import httpx
 import structlog
 
 logger = structlog.get_logger("hellofin.gemini")
+
+async def analyze_risk_with_gemini(text: str, sender_phone: str = "unknown") -> dict:
+    """
+    Perform deep scam detection using Gemini 1.5 Flash.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return {"risk_score": 0, "is_scam": False}
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    
+    prompt = f"""
+    You are an elite voice phishing detection AI. Analyze this message from {sender_phone}:
+    "{text}"
+
+    Detect: authority impersonation, urgency, financial extraction, family emergencies, or investment scams.
+    
+    Respond ONLY with valid JSON:
+    {{
+      "is_scam": true/false,
+      "risk_score": 0-100,
+      "scam_type": "string",
+      "explanation": "concise explanation",
+      "confidence": 0-100,
+      "detected_tactics": ["list"]
+    }}
+    """
+
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"response_mime_type": "application/json"}
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=payload, timeout=15.0)
+            response.raise_for_status()
+            data = response.json()
+            raw_text = data['candidates'][0]['content']['parts'][0]['text']
+            return json.loads(raw_text)
+    except Exception as e:
+        logger.error("gemini_risk_analysis_failed", error=str(e))
+        return {"risk_score": 0, "is_scam": False, "explanation": "Gemini analysis failed."}
 
 async def get_gemini_explanation(transcript: str, risk_score: int) -> str:
     """

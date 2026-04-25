@@ -19,6 +19,7 @@ class RiskResponse(BaseModel):
     risk_factors: list[dict]
     lambda_score: Optional[int] = None
     recommendation: str
+    gemini_reason: Optional[str] = None
 
 
 class WebhookResponse(BaseModel):
@@ -57,6 +58,7 @@ class CaregiverAlert(BaseModel):
     status: str = "pending"
     transcript: Optional[str] = None
     translation: Optional[str] = None
+    gemini_reason: Optional[str] = None
 
 
 class ActionResponse(BaseModel):
