@@ -39,7 +39,7 @@ async def translate_text(text: str, target_language: str = "English") -> str:
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "llama3-70b-8192",
+                    "model": "llama-3.3-70b-versatile",
                     "messages": [
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": user_message},

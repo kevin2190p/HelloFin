@@ -50,7 +50,9 @@ async def telegram_webhook(request: Request):
 
 async def handle_telegram_update(update: dict, app):
     """Shared logic for both webhook and polling."""
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    raw_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    token = raw_token.strip().replace("\n", "").replace("\r", "")
+    
     if not token or "REPLACE" in token:
         logger.error("telegram_handle_error", detail="TELEGRAM_BOT_TOKEN is missing or invalid in .env")
         return
@@ -148,23 +150,19 @@ async def start_telegram_polling(app):
 
     while True:
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=15.0) as client:
                 params = {
                     "offset": offset,
-                    "timeout": 5, # Faster response
+                    "timeout": 0,  # Short poll - doesn't block the event loop
                     "allowed_updates": ["message"]
                 }
-                # print(f"[DEBUG] Polling Telegram for updates (offset={offset})...")
-                resp = await client.get(url, params=params, timeout=10.0)
+                resp = await client.get(url, params=params)
                 
                 if resp.status_code == 200:
                     data = resp.json()
                     results = data.get("result", [])
                     if results:
                         print(f"[DEBUG] 🔥 RECEIVED {len(results)} NEW MESSAGES!")
-                    else:
-                        # Minimal heartbeat
-                        pass
                         
                     for update in results:
                         offset = update["update_id"] + 1
@@ -176,7 +174,9 @@ async def start_telegram_polling(app):
                 else:
                     print(f"[DEBUG] Telegram Polling error: {resp.status_code}")
                     logger.error("telegram_polling_error", status=resp.status_code)
-                    await asyncio.sleep(5)
+            
+            # Sleep between polls to not hammer the API and free the event loop
+            await asyncio.sleep(1.5)
         except asyncio.CancelledError:
             break
         except Exception as e:
@@ -186,11 +186,15 @@ async def start_telegram_polling(app):
 
 async def send_telegram_reply(chat_id: int, text: str, bot_token: str):
     """Send a message back to the Telegram chat."""
+    clean_token = bot_token.strip().replace("\n", "").replace("\r", "")
     async with httpx.AsyncClient() as client:
         try:
-            await client.post(
-                f"{TELEGRAM_API_URL}{bot_token}/sendMessage",
+            resp = await client.post(
+                f"{TELEGRAM_API_URL}{clean_token}/sendMessage",
                 json={"chat_id": chat_id, "text": text}
             )
+            if resp.status_code != 200:
+                print(f"[DEBUG] ❌ Telegram Reply FAILED: {resp.status_code} - {resp.text}")
+            resp.raise_for_status()
         except Exception as e:
             logger.error("telegram_reply_failed", error=str(e))

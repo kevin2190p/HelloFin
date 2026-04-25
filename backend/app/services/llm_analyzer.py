@@ -85,13 +85,12 @@ Is this a scam/phishing attempt? Provide your analysis as JSON."""
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "llama3-70b-8192",  # More stable Llama 3 model
+                    "model": "llama-3.3-70b-versatile",
                     "messages": [
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": user_message},
                     ],
-                    "temperature": 0.1,  # Low temp for deterministic detection
-                    "max_tokens": 1024,
+                    "temperature": 0.5,
                     "response_format": {"type": "json_object"},
                 },
             )

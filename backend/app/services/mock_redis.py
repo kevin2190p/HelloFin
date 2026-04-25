@@ -62,6 +62,15 @@ class MockRedis:
             return lst[start:]
         return lst[start : end + 1]
 
+    async def ltrim(self, name, start, end):
+        if name in self.lists:
+            lst = self.lists[name]
+            if end == -1:
+                self.lists[name] = lst[start:]
+            else:
+                self.lists[name] = lst[start : end + 1]
+        return True
+
     async def delete(self, name):
         self.data.pop(name, None)
         self.lists.pop(name, None)

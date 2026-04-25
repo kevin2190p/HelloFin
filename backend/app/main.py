@@ -6,14 +6,17 @@ SOC2-ready audit logging, zero-trust design.
 """
 
 import os
+import asyncio
 import time
 import uuid
-import asyncio
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+
+# Force load .env from current directory
+load_dotenv()
 
 import redis.asyncio as aioredis
 import structlog
-from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -85,7 +88,7 @@ async def lifespan(app: FastAPI):
     await app.state.redis.close()
     logger.info("hellofin_shutdown")
 
-
+# --- RESTART TRIGGER: 2026-04-25 15:12:00 ---
 app = FastAPI(
     title="HelloFin – Voice Phishing Detection",
     description="Bank-grade voice phishing detection for TNG Digital FINHACK 2026",
@@ -94,13 +97,24 @@ app = FastAPI(
     redirect_slashes=True,
 )
 
+@app.middleware("http")
+async def add_private_network_header(request: Request, call_next):
+    response = await call_next(request)
+    if request.method == "OPTIONS":
+        response.headers["Access-Control-Allow-Private-Network"] = "true"
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
+
 # CORS – allow frontend dashboard
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Lock down in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 

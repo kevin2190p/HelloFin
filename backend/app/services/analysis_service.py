@@ -39,16 +39,7 @@ async def process_message(
     if not translated_text:
         translated_text = transcript
 
-    # Layer 1: Keyword Risk Scorer
-    keyword_result = calculate_risk_score(
-        transcript=transcript,
-        caller_number=sender_phone,
-        is_new_payee=is_new_payee,
-        transaction_amount=transaction_amount,
-    )
-    keyword_score = keyword_result["risk_score"]
-
-    # Layer 2: Qwen3 LLM Analysis
+    # Layer 1: Groq LLM Analysis (Llama 3.1 70B)
     try:
         llm_result = await analyze_with_qwen(
             text=translated_text,
@@ -60,10 +51,6 @@ async def process_message(
     
     llm_score = llm_result.get("risk_score", 0)
     llm_confidence = llm_result.get("confidence", 0)
-
-    # Score Fusion
-    if llm_confidence >= 70:
-        llm_score = llm_result.get("risk_score", 0)
     llm_factors = llm_result.get("risk_factors", [])
 
     # Layer 3: HuggingFace specialized classification
@@ -75,22 +62,35 @@ async def process_message(
         
     hf_score = int(hf_prob * 100)
     
-    # Fusion: 50% LLM, 30% Keyword, 20% HuggingFace
+    # Pure AI Fusion: 70% LLM (Groq), 30% HuggingFace
     hf_key_present = hf_score > 0
-    llm_key_present = llm_score > 0
+    llm_key_present = llm_score > 0 and llm_result.get("confidence", 0) > 0
     
     if llm_key_present and hf_key_present:
-        final_score = int((llm_score * 0.5) + (keyword_score * 0.3) + (hf_score * 0.2))
+        final_score = int((llm_score * 0.7) + (hf_score * 0.3))
+        logger.info("ai_fusion_active", mode="LLM+HF")
     elif llm_key_present:
-        final_score = int((llm_score * 0.6) + (keyword_score * 0.4))
+        final_score = llm_score
+        logger.info("ai_fusion_active", mode="LLM Only")
+    elif hf_key_present:
+        final_score = hf_score
+        logger.info("ai_fusion_active", mode="HF Only")
     else:
-        # If AI fails, rely 100% on keywords
-        final_score = keyword_score
+        # If AI fails, fallback to Keywords
+        keyword_result = calculate_risk_score(
+            transcript=transcript,
+            caller_number=sender_phone,
+            is_new_payee=is_new_payee,
+            transaction_amount=transaction_amount,
+        )
+        final_score = keyword_result["risk_score"]
+        llm_factors = keyword_result["risk_factors"]
+        logger.warning("ai_fusion_inactive", reason="AI models returned 0 or failed. Falling back to Keywords.")
     
     final_score = min(100, max(0, final_score))
     
     # Merge factors
-    all_factors = keyword_result["risk_factors"] + llm_factors
+    all_factors = llm_factors
     if hf_key_present:
         all_factors.append({
             "factor": "HuggingFace Confidence",
@@ -102,11 +102,10 @@ async def process_message(
             "category": "llm_deep_analysis",
             "points": llm_score,
             "matches": llm_result.get("flagged_phrases", [])[:5],
-            "description": f"Qwen3: {llm_result.get('explanation', '')}",
+            "description": f"Groq Llama 3.1: {llm_result.get('explanation', '')}",
             "scam_type": llm_result.get("scam_type", "unknown"),
             "language": llm_result.get("language_detected", "unknown"),
         })
-
     threshold_high = 50 # Lowered for real-world testing/demonstration
     status = "held" if final_score >= threshold_high else "cleared"
 
@@ -133,26 +132,27 @@ async def process_message(
 
     await redis.hset(f"txn:{txn_id}", mapping=record.model_dump_redis())
     
-    # Push to caregiver alerts if risk is high
+    # Always create an alert for the dashboard (Transparency)
+    alert = {
+        "txn_id": txn_id,
+        "risk_score": final_score,
+        "sender_phone": sender_phone,
+        "transaction_amount": transaction_amount,
+        "reason": f"{message_type.replace('_', ' ').title()}: {llm_result.get('scam_type', 'Suspicious message')}",
+        "timestamp": timestamp,
+        "status": status,  # "held" or "cleared"
+        "transcript": transcript,
+        "translation": translated_text if translated_text != transcript else None
+    }
+    await redis.lpush("caregiver:alerts", json.dumps(alert))
+    await redis.ltrim("caregiver:alerts", 0, 99) # Keep last 100
+    print(f"[DEBUG] 🚀 Alert Pushed to Redis: {txn_id} (Status: {status})")
+    logger.info("dashboard_update_pushed", txn_id=txn_id, status=status)
+
     if status == "held":
         await redis.sadd("txn:pending", txn_id)
         auto_cancel_sec = int(os.getenv("AUTO_CANCEL_SECONDS", "600"))
         await redis.setex(f"txn:timer:{txn_id}", auto_cancel_sec, "pending")
-        
-        # Create alert for the dashboard
-        alert = {
-            "txn_id": txn_id,
-            "risk_score": final_score,
-            "sender_phone": sender_phone,
-            "transaction_amount": transaction_amount,
-            "reason": f"{message_type.replace('_', ' ').title()}: {llm_result.get('scam_type', 'Suspicious message')}",
-            "timestamp": timestamp,
-            "status": "held",
-            "transcript": transcript,
-            "translation": translated_text if translated_text != transcript else None
-        }
-        await redis.lpush("caregiver:alerts", json.dumps(alert))
-        logger.info("caregiver_alert_pushed", txn_id=txn_id)
 
     return WebhookResponse(
         txn_id=txn_id,

@@ -79,22 +79,30 @@ async def hold_transaction(request: Request, payload: HoldRequest):
     )
 
 
-@router.get("/caregiver/alerts", response_model=list[CaregiverAlert])
+@router.get("/caregiver/alerts")
 async def list_caregiver_alerts(request: Request):
     """
-    List all pending high-risk transaction alerts for caregiver review.
-    Returns newest first.
+    List all transaction alerts. Newest first.
     """
     redis = request.app.state.redis
-    raw_alerts = await redis.lrange("caregiver:alerts", 0, -1)
+    # Get last 100 alerts from the list
+    raw_alerts = await redis.lrange("caregiver:alerts", 0, 99)
+    
+    # DEBUG PRINT
+    print(f"[DEBUG] 🔍 Dashboard Fetch: Found {len(raw_alerts)} total alerts in Redis/MockRedis")
 
     alerts = []
     for raw in raw_alerts:
-        data = json.loads(raw)
-        # Check if still pending (not already approved/cancelled)
-        txn_status = await redis.hget(f"txn:{data['txn_id']}", "status")
-        data["status"] = txn_status or data.get("status", "pending")
-        alerts.append(CaregiverAlert(**data))
+        try:
+            data = json.loads(raw)
+            # Ensure essential fields for the dashboard
+            if "status" not in data: data["status"] = "pending"
+            if "timestamp" not in data: data["timestamp"] = time.time()
+            if "risk_score" not in data: data["risk_score"] = 0
+            
+            alerts.append(data)
+        except Exception:
+            continue
 
     return alerts
 

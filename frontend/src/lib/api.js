@@ -3,18 +3,27 @@
  * Communicates with the FastAPI backend for caregiver operations.
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const BASE_URL = 'http://127.0.0.1:8000';
+
+export async function detectBackend() {
+  return BASE_URL;
+}
 
 async function request(path, options = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    ...options,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || `API error ${res.status}`);
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      headers: { 'Content-Type': 'application/json', ...options.headers },
+      ...options,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || `API error ${res.status}`);
+    }
+    return res.json();
+  } catch (err) {
+    console.error(`[API ERROR] ${path}:`, err);
+    throw err;
   }
-  return res.json();
 }
 
 /** Fetch all pending caregiver alerts */

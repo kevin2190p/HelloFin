@@ -5,7 +5,7 @@
 
 import { fetchAlerts, approveTransaction, cancelTransaction } from './api.js';
 
-const REFRESH_INTERVAL = 15000; // 15 seconds
+const REFRESH_INTERVAL = 1500; // 1.5 seconds (Real-time)
 
 /**
  * Start auto-refresh polling for caregiver alerts.
