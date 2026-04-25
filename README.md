@@ -1,161 +1,61 @@
-# 🛡️ Fakeout – Voice Phishing Detection System
+# FAKEOUT
 
-> **TNG Digital FINHACK 2026** | Bank-grade voice phishing detection with multi-cloud security
+**Protecting Everyone, Not Just Banks. Your Money Stays Safe.**
 
-Fakeout intercepts WhatsApp voice notes in real-time, transcribes them using OpenAI Whisper, detects phishing patterns with a multi-factor risk engine, and holds suspicious transactions — giving caregivers the power to block scams before money moves.
+FAKEOUT is a mobile application designed to protect Malaysians from elder fraud and scam calls. We empower caregivers and users with real-time alerts and instant control over suspicious transactions, ensuring that money never leaves their hands without verification. The app aims to stand out from its competition by combining AI-powered voice analysis with automated holds, giving users complete peace of mind.
 
-## 🎬 Demo Flow
+## Features
 
-```
-WhatsApp Voice Note → n8n Workflow → Whisper Transcription → Risk Scoring
-    → HIGH RISK (≥80) → Transaction HELD → User sees "Processing"
-    → Caregiver WhatsApp Alert → Dashboard Review → Approve or Cancel
-    → Auto-cancel after 10 minutes if no action
-```
+**Detect scam calls and voice notes in real-time:**
+- AI-powered voice analysis using OpenAI Whisper for instant speech-to-text transcription.
+- Risk scoring algorithm that identifies scam keywords and urgency patterns.
+- Automatic flagging of suspicious transactions within seconds.
 
-## 🏗️ Architecture
+**Receive instant caregiver alerts via WhatsApp:**
+- Caregivers are notified immediately when suspicious activity is detected.
+- One-click approval or cancellation directly from WhatsApp.
+- Real-time dashboard for complete transaction overview.
 
-```
-┌─────────────┐    ┌──────────┐    ┌──────────────┐
-│  WhatsApp   │───▶│   n8n    │───▶│   FastAPI    │
-│  Voice Note │    │ Workflow │    │   Backend    │
-└─────────────┘    └──────────┘    └──────┬───────┘
-                                          │
-                   ┌──────────────────────┼──────────────────────┐
-                   │                      │                      │
-            ┌──────▼──────┐    ┌──────────▼──────┐    ┌─────────▼────────┐
-            │   OpenAI    │    │      Redis      │    │   Alibaba OSS    │
-            │   Whisper   │    │   (Tx Store)    │    │  (Audio Vault)   │
-            └─────────────┘    └────────┬────────┘    └──────────────────┘
-                                        │
-                               ┌────────▼────────┐
-                               │  Svelte Dashboard│
-                               │  (Caregiver UI)  │
-                               └──────────────────┘
-```
+**Smart hold and auto-cancel protection:**
+- Suspicious transactions display "Processing" to trap scammers psychologically.
+- Money is held securely in Alibaba vault during verification window.
+- Auto-cancel after 60 minutes if user doesn't respond—money returns safely.
+- User maintains full control throughout the entire process.
 
-## 🚀 Quick Start
+**Caregiver dashboard with real-time monitoring:**
+- View all flagged transactions with risk scores and detected keywords.
+- Approve or cancel transactions with a single click.
+- Monitor processing timers and auto-cancel countdowns.
+- Complete audit trail for compliance and record-keeping.
 
-### Prerequisites
-- Docker & Docker Compose
-- Node.js 20+ (for local frontend dev)
-- Python 3.11+ (for local backend dev)
+**Cross-cloud security and encryption:**
+- Alibaba OSS stores encrypted audio and real balance state.
+- AWS Lambda handles deception layer and risk trigger evaluation.
+- AES-256 encryption for all sensitive data.
+- No single point of failure—multi-cloud protection.
 
-### 1. Configure Environment
-```bash
-cp .env.example .env   # or edit the existing .env
-# Fill in your API keys (see Credentials section below)
-```
+**Fallback detection methods:**
+- Call duration analysis for calls without voice consent.
+- Unknown number detection and location pattern analysis.
+- Behavioral scoring from transaction history.
 
-### 2. Run with Docker Compose
-```bash
-docker compose up -d
-```
+## Dependencies used
 
-Services will be available at:
-- **FastAPI**: http://localhost:8000 (API docs: http://localhost:8000/docs)
-- **n8n**: http://localhost:5678
-- **Dashboard**: http://localhost:3000
-- **Redis**: localhost:6379
+- **Frontend**: Svelte, SvelteKit, Tailwind CSS, Chart.js
+- **Backend**: FastAPI, OpenAI Whisper, Claude AI
+- **Automation**: n8n, OpenClaw
+- **Cloud**: AWS Lambda, Alibaba OSS, Alibaba KMS
+- **Communications**: Meta WhatsApp API
+- **Database**: Firebase/PostgreSQL (configurable)
 
-### 3. Import n8n Workflow
-1. Open http://localhost:5678
-2. Go to Workflows → Import from File
-3. Select `n8n/voice_phishing_workflow.json`
-4. Configure WhatsApp credentials in n8n
+## Videos
+[![FAKEOUT Demo 1](https://img.youtube.com/vi/YOUR_VIDEO_ID/maxresdefault.jpg)](https://youtube.com/shorts/AD6FtyKAbxI?feature=share)
+[![FAKEOUT Demo 2](https://img.youtube.com/vi/YOUR_VIDEO_ID/maxresdefault.jpg)](https://youtube.com/shorts/MwPh_bhscX0)
 
-## 📁 Project Structure
+## License
 
-```
-Fakeout/
-├── .env                          # Environment variables (gitignored)
-├── .gitignore
-├── docker-compose.yml
-├── backend/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── app/
-│       ├── main.py               # FastAPI entry + audit middleware
-│       ├── routers/
-│       │   ├── webhook.py        # WhatsApp voice note receiver
-│       │   ├── risk.py           # Risk scoring endpoint
-│       │   └── tng.py            # TNG hold + caregiver alerts
-│       ├── services/
-│       │   ├── whisper_client.py  # OpenAI Whisper integration
-│       │   ├── risk_scorer.py     # Multi-factor risk engine
-│       │   ├── cloud_clients.py   # AWS Lambda + Alibaba OSS/KMS
-│       │   └── audit_logger.py    # SOC2-ready JSON audit logs
-│       └── models/
-│           └── schemas.py         # Pydantic request/response models
-├── frontend/
-│   ├── Dockerfile
-│   ├── package.json
-│   └── src/
-│       ├── App.svelte             # Caregiver dashboard
-│       ├── main.js
-│       └── lib/
-│           ├── api.js             # API client
-│           └── caregiverDashboard.js
-├── n8n/
-│   └── voice_phishing_workflow.json
-├── openclaw/
-│   └── config.yaml
-└── README.md
-```
+MIT License
 
-## 🔑 Credentials Required
+## Closing
 
-| Service | Key | Where to Get |
-|---------|-----|-------------|
-| OpenAI | `OPENAI_API_KEY` | [platform.openai.com](https://platform.openai.com) |
-| Meta App | `META_APP_ID`, `META_APP_SECRET` | [developers.facebook.com](https://developers.facebook.com) |
-| WhatsApp | `WHATSAPP_BUSINESS_ACCOUNT_ID`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN` | Meta Business Suite |
-| AWS | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | IAM Console (Lambda/S3) |
-| Alibaba | `ALIBABA_ACCESS_KEY_ID`, `ALIBABA_ACCESS_KEY_SECRET` | RAM Console (OSS/KMS) |
-| TNG | `TNG_MINI_PROGRAM_APP_ID`, `TNG_MINI_PROGRAM_APP_SECRET` | [miniprogram.tngdigital.com.my](https://miniprogram.tngdigital.com.my) |
-
-## 🔒 Security (Bank-Grade / SOC2 Ready)
-
-- **Zero-trust**: All endpoints validated, no implicit trust
-- **Encryption at rest**: Alibaba OSS AES-256 server-side encryption
-- **Encryption in transit**: TLS 1.2+ enforced
-- **Audit logging**: Every API request logged as JSON (SOC2 compliant)
-- **Secrets management**: All credentials via environment variables
-- **Key management**: Alibaba KMS for PII encryption
-- **No credential leakage**: `.env` gitignored, no hardcoded secrets
-
-## 🤖 OpenClaw Integration
-
-OpenClaw can be used as an alternative to n8n for WhatsApp webhook handling. For this hackathon, **n8n is the primary orchestrator**, but the `openclaw/config.yaml` provides a ready-to-use configuration that:
-
-- Listens for WhatsApp voice messages on port 9000
-- Auto-downloads media attachments
-- Forwards audio to the same FastAPI endpoint
-- Sends caregiver alerts via WhatsApp
-
-To use OpenClaw instead of n8n, deploy the OpenClaw service with the provided config and point your Meta webhook URL to the OpenClaw endpoint.
-
-## 🧪 API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/webhook/whatsapp-voice` | Receive audio, transcribe, score risk |
-| `POST` | `/risk/score` | Score risk from transcript + context |
-| `POST` | `/tng/hold` | Hold high-risk transaction |
-| `GET` | `/caregiver/alerts` | List pending alerts |
-| `POST` | `/caregiver/approve/{txn_id}` | Approve transaction |
-| `POST` | `/caregiver/cancel/{txn_id}` | Cancel transaction |
-| `GET` | `/health` | Health check |
-
-## 👥 Team
-
-| Branch | Member |
-|--------|--------|
-| `kv` | Kevin |
-| `shawn` | Shawn |
-| `jane` | Jane |
-| `sy` | SY |
-
----
-
-**Built with ❤️ for TNG Digital FINHACK 2026**
+Banks release your money to scammers. FAKEOUT gives it back to you.
