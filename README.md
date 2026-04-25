@@ -48,6 +48,35 @@ FAKEOUT is a mobile application designed to protect Malaysians from elder fraud 
 - **Communications**: Meta WhatsApp API
 - **Database**: Firebase/PostgreSQL (configurable)
 
+## Screenshots
+
+![Screenshot 1](https://github.com/YOUR_USERNAME/fakeout/releases/download/v1.0-images/FK1.jpeg)
+
+*Caregiver dashboard showing real-time fraud alerts with risk scores*
+
+---
+
+![Screenshot 2](https://github.com/YOUR_USERNAME/fakeout/releases/download/v1.0-images/FK2.jpeg)
+
+*High-risk alert notification with one-click approve/cancel buttons*
+
+---
+
+![Screenshot 3](https://github.com/YOUR_USERNAME/fakeout/releases/download/v1.0-images/FK3.jpeg)
+
+*Multi-cloud setup: Voice Analysis → Risk Scoring → Multi-Cloud Hold*
+
+---
+![Screenshot 4](https://github.com/YOUR_USERNAME/fakeout/releases/download/v1.0-images/FK4.jpeg)
+
+*3-Stage Protection: Detection → Analysis → Trap*
+
+---
+
+![Screenshot 5](https://github.com/YOUR_USERNAME/fakeout/releases/download/v1.0-images/FK5.jpeg)
+
+*Transaction processing with auto-cancel safety feature*
+
 ## Videos
 [![FAKEOUT Demo 1](https://img.youtube.com/vi/YOUR_VIDEO_ID/maxresdefault.jpg)](https://youtube.com/shorts/AD6FtyKAbxI?feature=share)
 [![FAKEOUT Demo 2](https://img.youtube.com/vi/YOUR_VIDEO_ID/maxresdefault.jpg)](https://youtube.com/shorts/MwPh_bhscX0)
