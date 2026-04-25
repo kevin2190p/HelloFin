@@ -1,0 +1,11 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Netlify auto-applies the Next.js Runtime plugin which handles
+# SSR routes (/api/*) and ISR. No manual plugin entry needed
+# for Next.js 13.5+ with the App Router.
