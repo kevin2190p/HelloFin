@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
 # Force load .env from current directory
-load_dotenv()
+load_dotenv(override=True)
 
 import redis.asyncio as aioredis
 import structlog

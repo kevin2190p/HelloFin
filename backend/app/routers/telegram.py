@@ -113,8 +113,8 @@ async def handle_telegram_update(update: dict, app):
         
         # Build the structured output exactly as requested
         structured_text = (
-            f"🧾 Transcription Result\n\n"
-            f"Text:\n{msg_content}\n\n"
+            f"🧾 HelloFin Analysis Result\n\n"
+            f"Input:\n{msg_content}\n\n"
             f"📊 Status: Processed Successfully\n\n"
             f"--- AI VERDICT ---\n"
             f"Risk Score: {score}/100\n"

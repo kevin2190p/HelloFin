@@ -19,14 +19,15 @@ async def transcribe_audio(file_path: str, language: str = None) -> str:
     groq_key = os.getenv("GROQ_API_KEY", "").strip()
     hf_key = os.getenv("HUGGINGFACE_API_KEY", "").strip()
 
-    # Attempt 1: Groq (Fastest)
+    # Attempt: Groq (Verified Key + Native Support)
     if groq_key and not groq_key.startswith("REPLACE"):
         try:
             logger.info("stt_attempt_groq", file=path.name)
             async with httpx.AsyncClient(timeout=30.0) as client:
                 with open(path, "rb") as f:
-                    # Telegram sends .oga (Opus in Ogg). Groq supports .oga / .ogg.
-                    files = {"file": ("voice.oga", f)}
+                    # We name it .mp3 to ensure Groq's decoder is fully triggered,
+                    # but we send the raw .oga data from Telegram.
+                    files = {"file": ("voice.mp3", f, "audio/mpeg")}
                     data = {"model": "whisper-large-v3"}
                     if language: data["language"] = language
                     
@@ -36,30 +37,15 @@ async def transcribe_audio(file_path: str, language: str = None) -> str:
                         files=files,
                         data=data
                     )
-                    if resp.status_code == 200:
-                        return resp.json().get("text", "").strip()
                     
-                    # Detailed error logging to see WHY it's 400
-                    logger.error("groq_stt_api_error", status=resp.status_code, response=resp.text)
-                    logger.warn("groq_stt_failed_falling_back")
-        except Exception as e:
-            logger.warn("groq_stt_error", error=str(e))
-
-    # Attempt 2: HuggingFace (More Flexible with formats)
-    if hf_key and not hf_key.startswith("REPLACE"):
-        try:
-            logger.info("stt_attempt_huggingface", file=path.name)
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                with open(path, "rb") as f:
-                    resp = await client.post(
-                        HF_WHISPER_URL,
-                        headers={"Authorization": f"Bearer {hf_key}"},
-                        content=f.read()
-                    )
                     if resp.status_code == 200:
-                        return resp.json().get("text", "").strip()
-                    logger.error("hf_stt_failed", status=resp.status_code, body=resp.text)
+                        transcript = resp.json().get("text", "").strip()
+                        logger.info("stt_success", transcript_len=len(transcript))
+                        return transcript
+                    
+                    logger.error("groq_stt_api_error", status=resp.status_code, response=resp.text)
+                    
         except Exception as e:
-            logger.error("hf_stt_error", error=str(e))
+            logger.error("groq_stt_connection_error", error=str(e))
 
-    raise ValueError("All STT attempts failed. Please ensure your API keys are correct.")
+    raise ValueError("Transcription failed. Please ensure your Groq key is active and try again.")
