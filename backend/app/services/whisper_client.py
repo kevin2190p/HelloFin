@@ -18,6 +18,9 @@ async def transcribe_audio(file_path: str, language: str = None) -> str:
 
     groq_key = os.getenv("GROQ_API_KEY", "").strip()
     hf_key = os.getenv("HUGGINGFACE_API_KEY", "").strip()
+    
+    # DEBUG: Show which key is being used (masked)
+    print(f"[DEBUG] 🔑 STT Using Key: {groq_key[:10]}...{groq_key[-4:] if groq_key else 'NONE'}")
 
     # Attempt: Groq (Verified Key + Native Support)
     if groq_key and not groq_key.startswith("REPLACE"):
