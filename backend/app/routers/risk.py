@@ -12,7 +12,7 @@ from app.models.schemas import RiskRequest, RiskResponse
 from app.services.risk_scorer import calculate_risk_score
 from app.services.analysis_service import process_message
 
-logger = structlog.get_logger("hellofin.risk")
+logger = structlog.get_logger("fakeout.risk")
 
 router = APIRouter()
 

@@ -5,7 +5,7 @@ import json, time, os
 from pathlib import Path
 import structlog
 
-logger = structlog.get_logger("hellofin.audit")
+logger = structlog.get_logger("fakeout.audit")
 LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
 

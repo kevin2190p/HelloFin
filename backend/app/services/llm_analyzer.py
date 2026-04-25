@@ -20,11 +20,11 @@ import os
 import httpx
 import structlog
 
-logger = structlog.get_logger("hellofin.llm_analyzer")
+logger = structlog.get_logger("fakeout.llm_analyzer")
 
 GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-SYSTEM_PROMPT = """You are HelloFin's elite voice phishing detection AI for Malaysia.
+SYSTEM_PROMPT = """You are Fakeout's elite voice phishing detection AI for Malaysia.
 Your job is to analyze messages (transcribed voice notes or texts) and detect scam/phishing attempts.
 
 Malaysian scam patterns to detect:

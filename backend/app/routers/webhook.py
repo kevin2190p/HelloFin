@@ -31,7 +31,7 @@ from app.services.cloud_clients import upload_to_alibaba_oss
 from app.models.schemas import WebhookResponse, TransactionRecord
 from app.services.analysis_service import process_message
 
-logger = structlog.get_logger("hellofin.webhook")
+logger = structlog.get_logger("fakeout.webhook")
 
 router = APIRouter()
 
@@ -75,7 +75,7 @@ async def receive_whatsapp_voice(
     try:
         upload_to_alibaba_oss(
             file_path=str(audio_path),
-            bucket=os.getenv("ALIBABA_OSS_BUCKET", "hellofin-audio-vault"),
+            bucket=os.getenv("ALIBABA_OSS_BUCKET", "fakeout-audio-vault"),
             key=f"voice-notes/{txn_id}{file_ext}",
         )
     except Exception as e:

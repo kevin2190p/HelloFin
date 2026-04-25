@@ -7,6 +7,8 @@
     formatTime,
   } from "./lib/caregiverDashboard.js";
   import { healthCheck } from "./lib/api.js";
+  import WhatsAppWidget from "./lib/WhatsAppWidget.svelte";
+
   let alerts = [],
     error = null,
     stopPolling,
@@ -14,12 +16,245 @@
     now = Date.now(),
     actionLoading = {},
     actionResult = {};
-  let activeTab = "dashboard";
+
+  // Tabs
+  let activeTab = "whatsapp";
+
+  // Simulator state
+  let chatMessages = [],
+    injecting = false,
+    currentContact = "Unknown",
+    currentAvatar = "";
+
+  // Real-world scam preset scenarios for the WhatsApp simulator
+  const PRESETS = [
+    {
+      label: "📸 Instagram Verification",
+      cat: "Phishing",
+      name: "Instagram Support",
+      avatar: "https://randomuser.me/api/portraits/women/44.jpg",
+      parts: [
+        { from: "them", text: "02172269 is your verification code. Enter this code in the Instagram app to verify your account. For your security, do not share this code. Instagram will never ask you to share this code by phone call or email.", score: 30 },
+        { from: "me", text: "Hmm I didn't request any code... who is this?" },
+        { from: "them", text: "This is Instagram support. Your account has been flagged for suspicious activity. Please share the code now or your account will be permanently disabled within 1 hour.", score: 62 },
+        { from: "me", text: "Wait, Instagram wouldn't message me on WhatsApp right? This is suspicious..." },
+      ],
+    },
+    {
+      label: "👮 Sgt. Michael – Macau Scam",
+      cat: "Police Scam",
+      name: "Sergeant Michael",
+      avatar: "https://randomuser.me/api/portraits/men/32.jpg",
+      parts: [
+        { from: "them", text: "Hello, this is Sergeant Michael from Bukit Aman. I'm calling about an urgent matter.", score: 45 },
+        { from: "me", text: "Hello? What matter?" },
+        { from: "them", type: "voice", duration: 18, transcript: "Your identity is involved in a money laundering case under investigation by PDRM. We have records showing RM4.2 million in criminal proceeds linked to your bank account.", score: 95 },
+        { from: "me", text: "What?! That's impossible, I'm just a student..." },
+        { from: "them", text: "You must cooperate fully, or a warrant for your arrest will be issued within 24 hours. Do not tell anyone about this call, as the investigation is confidential.", score: 97 },
+        { from: "me", text: "Ok ok, what do I need to do?" },
+        { from: "them", text: "I need you to transfer funds to the safe account I'm about to send for investigation purposes. Once the case is cleared, your money will be returned immediately. This is your only chance to avoid being arrested.", score: 98 },
+      ],
+    },
+    {
+      label: "📱 Fake Friend – Phone Rosak",
+      cat: "Emergency Scam",
+      name: "Ahmad Razif",
+      avatar: "https://randomuser.me/api/portraits/men/75.jpg",
+      parts: [
+        { from: "them", text: "Hey, it's me. I'm using a friend's phone because mine rosak and my wallet got stolen.", score: 45 },
+        { from: "me", text: "Eh who is this? Which friend?" },
+        { from: "them", type: "voice", duration: 12, transcript: "It's me la bro! I need a favour urgently, can you lend me RM5,000? I'm stuck at a shop and need to pay for repairs before they close.", score: 72 },
+        { from: "me", text: "RM5,000?? That's a lot leh..." },
+        { from: "them", text: "I'll definitely pay you back by the end of this month. Please don't call my number – my phone is dead. Just trust me on this, I wouldn't ask if it wasn't serious.", score: 82 },
+      ],
+    },
+    {
+      label: "🎙️ Deepfake Voice – Help Me",
+      cat: "Family Scam",
+      name: "Anak (Son)",
+      avatar: "https://randomuser.me/api/portraits/men/85.jpg",
+      parts: [
+        { from: "them", type: "voice", duration: 8, transcript: "Ma, it's me. I'm in bad trouble. I left my wallet at work and I can't get home.", score: 68 },
+        { from: "me", text: "Hello?? What happened to you?!" },
+        { from: "them", text: "Please transfer RM1,500 to this account number I'm sending. Don't call my phone, I'm using a borrowed phone and my boss is right next to me.", score: 85 },
+        { from: "me", text: "Ok wait let me check..." },
+        { from: "them", type: "voice", duration: 15, transcript: "Just send it quickly ma. I promise I'll explain everything later. Don't call my number, just transfer now please.", score: 88 },
+      ],
+    },
+    {
+      label: "🏦 Bank Negara / LHDN",
+      cat: "Authority Scam",
+      name: "Officer Tan Wei Ming",
+      avatar: "https://randomuser.me/api/portraits/men/22.jpg",
+      parts: [
+        { from: "them", text: "This is a call from Bank Negara Malaysia. Your identity card has been flagged for fraudulent activities involving illicit funds totalling RM706,000.", score: 85 },
+        { from: "me", text: "What? I don't have that kind of money!" },
+        { from: "them", type: "voice", duration: 22, transcript: "I am now transferring you to the police fraud department at PDRM. Do not hang up. You are under investigation for money laundering.", score: 97 },
+        { from: "me", text: "Ok ok I'm listening..." },
+        { from: "them", text: "You are required to transfer your savings into the corporate accounts we provide for investigation. Failure to comply will result in immediate legal action, including freezing of all your bank accounts and a warrant for your arrest.", score: 99 },
+      ],
+    },
+    {
+      label: "📦 COD Parcel Scam",
+      cat: "Parcel Scam",
+      name: "Pos Laju Delivery",
+      avatar: "https://randomuser.me/api/portraits/women/68.jpg",
+      parts: [
+        { from: "them", text: "[Pos Laju Courier]\nYth. Customer,\nThere are 2 unpaid packages under your name with total value RM60. Your package delivery has been FAILED due to incomplete payment.", score: 55 },
+        { from: "me", text: "Huh? I didn't order anything recently..." },
+        { from: "them", text: "Click the link below to complete payment now:\nhttps://pos-laju-pay.xyz/claim\nIf payment is not made within 30 minutes, the package will be returned to sender and a penalty fee of RM25 will be charged.", score: 82 },
+      ],
+    },
+    {
+      label: "💼 Fake Job – WFH RM8K",
+      cat: "Job Scam",
+      name: "Jenny Lim (HR)",
+      avatar: "https://randomuser.me/api/portraits/women/33.jpg",
+      parts: [
+        { from: "them", text: "Job Offer: RM8,000 - RM15,000/month! Work from home, flexible hours. No experience needed.", score: 42 },
+        { from: "me", text: "Sounds too good to be true... what's the catch?" },
+        { from: "them", type: "voice", duration: 20, transcript: "Simple tasks only. Like and share social media posts, leave product reviews. Daily commission paid directly to your TNG eWallet. Our company is partnered with Shopee, Lazada, and TikTok.", score: 68 },
+        { from: "me", text: "What do I need to do to start?" },
+        { from: "them", text: "We have over 200 members already earning. To start, just click the link below, register, and pay a small registration fee of RM50 + Free RM20 credited to your account as a starter bonus!", score: 85 },
+      ],
+    },
+    {
+      label: "📈 Investment – 10% Returns",
+      cat: "Investment Scam",
+      name: "FYCMAX Admin",
+      avatar: "https://randomuser.me/api/portraits/men/45.jpg",
+      parts: [
+        { from: "them", text: "🚀 URGENT INVESTMENT ALERT 🚀\nOur special \"Growth Investment\" scheme is now open for new members! Guaranteed returns are paid every 30 minutes.", score: 55 },
+        { from: "me", text: "Every 30 minutes? That doesn't sound real..." },
+        { from: "them", text: "For every RM1,000 invested, you receive RM100 profit in just half an hour.\n✅ 0% risk\n✅ No hidden fees\n✅ Withdraw anytime", score: 78 },
+        { from: "me", text: "How do I know this is legit?" },
+        { from: "them", text: "Our members have earned over RM23,000 in just their first week! This offer will close at midnight tonight. Click here to view our profit screenshots and join our VIP group now.", score: 88 },
+      ],
+    },
+    {
+      label: "📮 Customs – Prohibited Items",
+      cat: "Customs Scam",
+      name: "Kastam Officer Azlan",
+      avatar: "https://randomuser.me/api/portraits/men/52.jpg",
+      parts: [
+        { from: "them", text: "This is an automated message from Pos Malaysia & Customs Department. A parcel under your name containing prohibited items and an undeclared amount of cash has been detained at our warehouse.", score: 72 },
+        { from: "me", text: "What?? I never sent any parcel with cash!" },
+        { from: "them", type: "voice", duration: 25, transcript: "To avoid legal charges and court summons, please contact our investigation officer immediately. Your cooperation is required within 2 hours before we escalate this matter to Bank Negara Malaysia and PDRM for further action.", score: 92 },
+      ],
+    },
+  ];
+
+  function sleep(ms) {
+    return new Promise((r) => setTimeout(r, ms));
+  }
+
+  async function runPreset(p) {
+    if (injecting) return;
+    injecting = true;
+    chatMessages = [];
+    currentContact = p.name;
+    currentAvatar = p.avatar;
+    for (let i = 0; i < p.parts.length; i++) {
+      const part = p.parts[i];
+      const t = new Date().toLocaleTimeString("en-MY", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      if (part.from === "them") {
+        chatMessages = [
+          ...chatMessages,
+          {
+            id,
+            from: "them",
+            type: part.type || "text",
+            text: part.text || "",
+            transcript: part.transcript || "",
+            duration: part.duration || 0,
+            time: t,
+            scanning: true,
+            risk_score: null,
+          },
+        ];
+        await sleep(1800);
+        chatMessages = chatMessages.map((m) =>
+          m.id === id ? { ...m, scanning: false, risk_score: part.score } : m,
+        );
+        // Push high-risk simulated messages into the alert dashboard so judges
+        // can see scam->alert lifecycle without needing real Telegram traffic.
+        if (part.score >= 80) {
+          const band = part.score >= 80 ? "CRITICAL" : "HIGH";
+          const simAlert = {
+            txn_id: id,
+            sender_phone: currentContact,
+            risk_score: part.score,
+            status: "held",
+            timestamp: Math.floor(Date.now() / 1000),
+            transaction_amount: Math.floor(Math.random() * 8000) + 1000,
+            reason: p.cat + " — flagged by AI engine",
+            risk_reasons: [
+              `Risk band: ${band} (${part.score}/100). Pattern matches ${p.cat.toLowerCase()}.`,
+              `Sender impersonates "${p.name}" — common scam persona used in this category.`,
+              "Message uses urgency, fear, or authority cues to push immediate action.",
+              "Asks the victim to transfer money, share OTPs, or click suspicious links.",
+            ],
+            transcript: part.transcript || "",
+            _simulated: true,
+          };
+          alerts = [...alerts, simAlert];
+        }
+      } else {
+        chatMessages = [
+          ...chatMessages,
+          {
+            id,
+            from: "me",
+            type: "text",
+            text: part.text,
+            time: t,
+            scanning: false,
+            risk_score: null,
+          },
+        ];
+      }
+      await sleep(1200);
+    }
+    injecting = false;
+  }
 
   let ticker;
+  // Tracks alerts the caregiver has just acted on locally. Polling will not be
+  // allowed to revert these statuses until either:
+  //   (a) the backend's polled response already reflects the new status, or
+  //   (b) the override TTL expires (safety net if the backend call fails).
+  // Shape: { [txn_id]: { status: "approved"|"cancelled", until: epoch_ms } }
+  let actionOverrides = {};
+  const OVERRIDE_TTL_MS = 8000;
+
   onMount(() => {
+    // Polling: keep simulated alerts, replace backend-sourced alerts on each tick
     stopPolling = startPolling((d, e) => {
-      if (d) alerts = d;
+      if (Array.isArray(d)) {
+        const sim = alerts.filter((a) => a._simulated);
+        const nowMs = Date.now();
+        const merged = d.map((a) => {
+          const ov = actionOverrides[a.txn_id];
+          if (!ov) return a;
+          // Backend already caught up – drop the override.
+          if (a.status === ov.status) {
+            delete actionOverrides[a.txn_id];
+            return a;
+          }
+          // TTL expired – give up and trust the backend.
+          if (ov.until <= nowMs) {
+            delete actionOverrides[a.txn_id];
+            return a;
+          }
+          // Hold the optimistic status until the backend catches up.
+          return { ...a, status: ov.status };
+        });
+        alerts = [...sim, ...merged];
+      }
       error = e;
     });
     ticker = setInterval(() => {
@@ -41,15 +276,33 @@
       ? "EXPIRED"
       : `${Math.floor(d / 60)}:${(d % 60).toString().padStart(2, "0")}`;
   }
-  function onApprove(id) {
+  function _resolveAlert(id, newStatus, backendCall) {
+    const target = alerts.find((a) => a.txn_id === id);
+    if (!target || target.status === newStatus) return; // already resolved
+    // Optimistic UI update – the pending counter drops by 1 immediately
+    // because pendingAlerts is reactive on `alerts`.
     alerts = alerts.map((a) =>
-      a.txn_id === id ? { ...a, status: "approved" } : a,
+      a.txn_id === id ? { ...a, status: newStatus } : a,
     );
+    // Simulated alerts have no Redis record – don't call the backend.
+    if (target._simulated) return;
+    // Register a short-lived override so polling can't revert this card
+    // before the backend write propagates back to /caregiver/alerts.
+    actionOverrides[id] = {
+      status: newStatus,
+      until: Date.now() + OVERRIDE_TTL_MS,
+    };
+    backendCall(id).catch((err) => {
+      console.warn(`[alert action] ${newStatus} failed for ${id}`, err);
+      // On backend failure we still let the override TTL elapse; the next
+      // poll after that will resync to whatever Redis says.
+    });
+  }
+  function onApprove(id) {
+    _resolveAlert(id, "approved", handleApprove);
   }
   function onCancel(id) {
-    alerts = alerts.map((a) =>
-      a.txn_id === id ? { ...a, status: "cancelled" } : a,
-    );
+    _resolveAlert(id, "cancelled", handleCancel);
   }
   $: pendingAlerts = alerts.filter(
     (a) => a.status === "held" || a.status === "pending",
@@ -66,14 +319,13 @@
   <header>
     <div class="logo">
       <svg class="logo-wave" viewBox="0 0 48 28" width="42" height="26">
-        <defs
-          ><linearGradient id="wg" x1="0" y1="0" x2="1" y2="0"
-            ><stop offset="0%" stop-color="#3b82f6" /><stop
-              offset="50%"
-              stop-color="#06b6d4"
-            /><stop offset="100%" stop-color="#14b8a6" /></linearGradient
-          ></defs
-        >
+        <defs>
+          <linearGradient id="wg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#3b82f6" />
+            <stop offset="50%" stop-color="#06b6d4" />
+            <stop offset="100%" stop-color="#14b8a6" />
+          </linearGradient>
+        </defs>
         <path
           d="M2 18c4-10 10-16 16-12s8 8 14 6 10-8 14-4"
           stroke="url(#wg)"
@@ -85,180 +337,237 @@
       </svg>
       <span class="logo-text">Fake<span class="logo-accent">out</span></span>
     </div>
+    <div class="status-pill" class:on={backendOnline} class:off={!backendOnline}>
+      <span class="dot"></span>
+      {backendOnline ? "Backend LIVE" : "Backend OFFLINE"}
+    </div>
   </header>
 
-  <div class="stats">
-    <div class="stat-card">
-      <div class="stat-icon">📡</div>
-      <span class="stat-n" style="font-size: 1rem; color: {backendOnline ? '#10B981' : '#EF4444'}">
-        {backendOnline ? 'LIVE' : 'OFFLINE'}
-      </span>
-      <span class="stat-l">Backend</span>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">🕒</div>
-      <span class="stat-n" style="font-size: 0.9rem">{new Date(now).toLocaleTimeString()}</span>
-      <span class="stat-l">Clock</span>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">📊</div>
-      <span class="stat-n">{alerts.length}</span><span class="stat-l">Total</span>
-    </div>
-    <div class="stat-card warn">
-      <div class="stat-icon">🚨</div>
-      <span class="stat-n">{pendingAlerts.length}</span><span class="stat-l">Pending</span>
-    </div>
-  </div>
-  {#if pendingAlerts.length === 0 && resolvedAlerts.length === 0}
-    <div class="empty">Waiting for live Telegram messages... 📡</div>
-  {/if}
-  {#if pendingAlerts.length > 0}
-    <div class="section-title">🚨 Pending Review</div>
-    {#each pendingAlerts as a (a.txn_id)}
-      <div class="alert-card">
-        <div class="a-score-ring"><span>{a.risk_score}</span></div>
-        <div class="a-body">
-          <div class="a-top">
-            <span class="a-tag">CRITICAL</span><span class="a-timer"
-              >⏱ {countdown(a.timestamp)}</span
-            >
-          </div>
-          <div class="a-row">
-            <span>From</span><span>{a.sender_phone}</span>
-          </div>
-          <div class="a-row">
-            <span>Amount</span><span
-              >RM {a.transaction_amount?.toLocaleString("en-MY", {
-                minimumFractionDigits: 2,
-              })}</span
-            >
-          </div>
-          <div class="a-row">
-            <span>Reason</span><span class="a-reason">{a.reason}</span>
-          </div>
+  <nav class="tabs">
+    <button class:active={activeTab === "whatsapp"} on:click={() => (activeTab = "whatsapp")}>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+      </svg>
+      WhatsApp Monitor
+    </button>
+    <button class:active={activeTab === "dashboard"} on:click={() => (activeTab = "dashboard")}>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+        <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+      </svg>
+      Alert Dashboard
+      {#if pendingAlerts.length > 0}
+        <span class="tab-badge">{pendingAlerts.length}</span>
+      {/if}
+    </button>
+  </nav>
 
-          {#if a.transcript}
-            <div class="a-voice-scrutiny">
-              <div class="a-scrutiny-header">
-                <svg
-                  viewBox="0 0 24 24"
-                  width="12"
-                  height="12"
-                  fill="currentColor"
-                  ><path
-                    d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"
-                  /><path
-                    d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"
-                  /></svg
-                >
-                AI Voice Transcript
-              </div>
-              <p class="a-transcript">"{a.transcript}"</p>
-
-              {#if a.translation}
-                <div class="a-translation-box">
-                  <div class="a-scrutiny-header" style="color: #A855F7">
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="12"
-                      height="12"
-                      fill="currentColor"
-                      ><path
-                        d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"
-                      /></svg
-                    >
-                    English Translation
-                  </div>
-                  <p class="a-transcript">"{a.translation}"</p>
-                </div>
-              {/if}
-            </div>
-          {/if}
-          <div class="a-actions">
-            <button class="btn-block" on:click={() => onCancel(a.txn_id)}
-              >🚫 Block & Cancel</button
-            >
-            <button class="btn-approve" on:click={() => onApprove(a.txn_id)}
-              >✅ Approve</button
-            >
-          </div>
-        </div>
+  {#if activeTab === "whatsapp"}
+    <div class="wa-layout">
+      <div class="wa-left">
+        <WhatsAppWidget
+          messages={chatMessages}
+          contactName={currentContact}
+          avatarUrl={currentAvatar}
+        />
       </div>
-    {/each}
-  {/if}
-  {#if resolvedAlerts.length > 0}
-    <div class="section-title" style="margin-top:24px">📋 Recently Scanned</div>
-    {#each resolvedAlerts as a (a.txn_id)}
-      <div
-        class="alert-card"
-        class:card-safe={a.status === "cleared" || a.status === "approved"}
-      >
-        <div
-          class="a-score-ring"
-          style="border-color:{a.risk_score >= 80
-            ? '#DC2626'
-            : a.risk_score >= 50
-              ? '#F59E0B'
-              : '#10B981'}"
-        >
-          {a.risk_score}
-        </div>
-        <div class="a-body">
-          <div class="a-top">
-            <span class="a-tag">
-              {#if a.status === "cleared"}✅ SAFE
-              {:else if a.status === "approved"}✅ APPROVED
-              {:else}🚫 CANCELLED{/if}
-            </span>
-            <span class="a-timer">{countdown(a.timestamp)}</span>
-          </div>
-          <div class="a-row">
-            <span>Sender</span><span>{a.sender_phone}</span>
-          </div>
-          <div class="a-row">
-            <span>Reason</span><span class="a-reason">{a.reason}</span>
-          </div>
-
-          {#if a.transcript}
-            <div class="a-voice-scrutiny">
-              <div class="a-scrutiny-header">
-                <svg
-                  viewBox="0 0 24 24"
-                  width="12"
-                  height="12"
-                  fill="currentColor"
-                  ><path
-                    d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"
-                  /><path
-                    d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"
-                  /></svg
-                >
-                AI Voice Transcript
-              </div>
-              <p class="a-transcript">"{a.transcript}"</p>
-
-              {#if a.translation}
-                <div class="a-translation-box">
-                  <div class="a-scrutiny-header" style="color: #A855F7">
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="12"
-                      height="12"
-                      fill="currentColor"
-                      ><path
-                        d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"
-                      /></svg
-                    >
-                    English Translation
-                  </div>
-                  <p class="a-transcript">"{a.translation}"</p>
+      <div class="wa-right">
+        <div class="card glass">
+          <div class="card-title">Real-World Scam Scenarios</div>
+          <div class="card-sub">Pick a scenario to simulate the WhatsApp conversation. High-risk messages auto-create alerts in the Dashboard tab.</div>
+          <div class="preset-grid">
+            {#each PRESETS as p}
+              <button class="preset-btn" on:click={() => runPreset(p)} disabled={injecting}>
+                <img src={p.avatar} alt="" class="preset-av" />
+                <div class="preset-info">
+                  <span class="preset-label">{p.label}</span>
+                  <span class="preset-cat">{p.cat}</span>
                 </div>
-              {/if}
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="#9CA3AF">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </button>
+            {/each}
+          </div>
+          {#if injecting}
+            <div class="injecting-bar">
+              <div class="inject-pulse"></div>
+              Scenario playing…
             </div>
           {/if}
         </div>
       </div>
-    {/each}
+    </div>
+  {/if}
+
+  {#if activeTab === "dashboard"}
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-icon">📡</div>
+        <span class="stat-n" style="font-size: 1rem; color: {backendOnline ? '#10B981' : '#EF4444'}">
+          {backendOnline ? "LIVE" : "OFFLINE"}
+        </span>
+        <span class="stat-l">Backend</span>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🕒</div>
+        <span class="stat-n" style="font-size: 0.9rem">{new Date(now).toLocaleTimeString()}</span>
+        <span class="stat-l">Clock</span>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <span class="stat-n">{alerts.length}</span>
+        <span class="stat-l">Total</span>
+      </div>
+      <div class="stat-card warn">
+        <div class="stat-icon">🚨</div>
+        <span class="stat-n">{pendingAlerts.length}</span>
+        <span class="stat-l">Pending</span>
+      </div>
+    </div>
+    {#if pendingAlerts.length === 0 && resolvedAlerts.length === 0}
+      <div class="empty">
+        Waiting for live Telegram messages... 📡<br />
+        <small style="color:#6B7280">Or run a scenario in WhatsApp Monitor to populate this dashboard.</small>
+      </div>
+    {/if}
+    {#if pendingAlerts.length > 0}
+      <div class="section-title">🚨 Pending Review</div>
+      {#each pendingAlerts as a (a.txn_id)}
+        <div class="alert-card">
+          <div class="a-score-ring"><span>{a.risk_score}</span></div>
+          <div class="a-body">
+            <div class="a-top">
+              <span class="a-tag">CRITICAL</span>
+              <span class="a-timer">⏱ {countdown(a.timestamp)}</span>
+            </div>
+            <div class="a-row">
+              <span>From</span><span>{a.sender_phone}</span>
+            </div>
+            <div class="a-row">
+              <span>Amount</span><span>RM {a.transaction_amount?.toLocaleString("en-MY", { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div class="a-row">
+              <span>Reason</span><span class="a-reason">{a.reason}</span>
+            </div>
+
+            {#if a.risk_reasons && a.risk_reasons.length > 0}
+              <div class="a-reasons-box">
+                <div class="a-reasons-header">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                  </svg>
+                  Why this score? — Groq Llama 3.3
+                </div>
+                <ul class="a-reasons-list">
+                  {#each a.risk_reasons as r}
+                    <li>{r}</li>
+                  {/each}
+                </ul>
+              </div>
+            {/if}
+
+            {#if a.transcript}
+              <div class="a-voice-scrutiny">
+                <div class="a-scrutiny-header">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                  </svg>
+                  AI Voice Transcript
+                </div>
+                <p class="a-transcript">"{a.transcript}"</p>
+
+                {#if a.translation}
+                  <div class="a-translation-box">
+                    <div class="a-scrutiny-header" style="color: #A855F7">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                        <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" />
+                      </svg>
+                      English Translation
+                    </div>
+                    <p class="a-transcript">"{a.translation}"</p>
+                  </div>
+                {/if}
+              </div>
+            {/if}
+            <div class="a-actions">
+              <button class="btn-block" on:click={() => onCancel(a.txn_id)}>🚫 Block & Cancel</button>
+              <button class="btn-approve" on:click={() => onApprove(a.txn_id)}>✅ Approve</button>
+            </div>
+          </div>
+        </div>
+      {/each}
+    {/if}
+    {#if resolvedAlerts.length > 0}
+      <div class="section-title" style="margin-top:24px">📋 Recently Scanned</div>
+      {#each resolvedAlerts as a (a.txn_id)}
+        <div class="alert-card" class:card-safe={a.status === "cleared" || a.status === "approved"}>
+          <div
+            class="a-score-ring"
+            style="border-color:{a.risk_score >= 80 ? '#DC2626' : a.risk_score >= 50 ? '#F59E0B' : '#10B981'}"
+          >
+            <span>{a.risk_score}</span>
+          </div>
+          <div class="a-body">
+            <div class="a-top">
+              <span class="a-tag">
+                {#if a.status === "cleared"}✅ SAFE
+                {:else if a.status === "approved"}✅ APPROVED
+                {:else}🚫 CANCELLED{/if}
+              </span>
+              <span class="a-timer">{countdown(a.timestamp)}</span>
+            </div>
+            <div class="a-row">
+              <span>Sender</span><span>{a.sender_phone}</span>
+            </div>
+            <div class="a-row">
+              <span>Reason</span><span class="a-reason">{a.reason}</span>
+            </div>
+
+            {#if a.risk_reasons && a.risk_reasons.length > 0}
+              <div class="a-reasons-box">
+                <div class="a-reasons-header">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                  </svg>
+                  Why this score? — Groq Llama 3.3
+                </div>
+                <ul class="a-reasons-list">
+                  {#each a.risk_reasons as r}
+                    <li>{r}</li>
+                  {/each}
+                </ul>
+              </div>
+            {/if}
+
+            {#if a.transcript}
+              <div class="a-voice-scrutiny">
+                <div class="a-scrutiny-header">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                  </svg>
+                  AI Voice Transcript
+                </div>
+                <p class="a-transcript">"{a.transcript}"</p>
+
+                {#if a.translation}
+                  <div class="a-translation-box">
+                    <div class="a-scrutiny-header" style="color: #A855F7">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                        <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" />
+                      </svg>
+                      English Translation
+                    </div>
+                    <p class="a-transcript">"{a.translation}"</p>
+                  </div>
+                {/if}
+              </div>
+            {/if}
+          </div>
+        </div>
+      {/each}
+    {/if}
   {/if}
 
   <footer>Fakeout · TNG Digital FINHACK 2026</footer>
@@ -283,11 +592,11 @@
     padding: 20px 28px 60px;
   }
 
-  /* Logo */
   header {
     padding: 20px 0 16px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
   }
   .logo {
     display: flex;
@@ -309,8 +618,39 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .status-pill .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .status-pill.on {
+    background: rgba(16, 185, 129, 0.08);
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.25);
+  }
+  .status-pill.on .dot {
+    background: #10b981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+  }
+  .status-pill.off {
+    background: rgba(239, 68, 68, 0.06);
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.25);
+  }
+  .status-pill.off .dot {
+    background: #ef4444;
+  }
 
-  /* Tabs */
   .tabs {
     display: flex;
     gap: 4px;
@@ -371,7 +711,6 @@
     align-items: start;
   }
 
-  /* Glass card */
   .card {
     background: rgba(30, 42, 50, 0.6);
     backdrop-filter: blur(16px);
@@ -477,10 +816,9 @@
     }
   }
 
-  /* Dashboard */
   .stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 12px;
     margin-bottom: 24px;
   }
@@ -547,6 +885,7 @@
     text-align: center;
     color: #9ca3af;
     font-size: 0.85rem;
+    line-height: 1.6;
   }
 
   .alert-card {
@@ -559,6 +898,10 @@
     padding: 20px;
     margin-bottom: 12px;
     box-shadow: 0 0 20px rgba(220, 38, 38, 0.05);
+  }
+  .alert-card.card-safe {
+    border-color: rgba(16, 185, 129, 0.2);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.05);
   }
   .a-score-ring {
     width: 56px;
@@ -647,38 +990,54 @@
   .btn-approve:hover {
     background: rgba(20, 184, 166, 0.2);
   }
-  .resolved-row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 12px 16px;
-    background: rgba(30, 42, 50, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    border-radius: 10px;
-    margin-bottom: 6px;
-    font-size: 0.78rem;
-    color: #9ca3af;
-  }
-  .r-stat {
-    font-weight: 700;
-    text-transform: uppercase;
-    font-size: 0.68rem;
-    min-width: 100px;
-  }
-  .r-stat.approved {
-    color: #10b981;
-  }
-  .r-stat.cancelled {
-    color: #dc2626;
-  }
 
-  /* Voice Scrutiny Styles */
   .a-voice-scrutiny {
     margin-top: 14px;
     padding: 12px;
     background: rgba(0, 0, 0, 0.25);
     border-radius: 10px;
     border: 1px solid rgba(59, 130, 246, 0.2);
+  }
+  .a-reasons-box {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: rgba(245, 158, 11, 0.06);
+    border-radius: 10px;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+  }
+  .a-reasons-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #f59e0b;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+  .a-reasons-list {
+    margin: 0;
+    padding-left: 18px;
+    color: #e5e7eb;
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+  .a-reasons-list li {
+    margin-bottom: 4px;
+  }
+  .a-reasons-list li::marker {
+    color: #f59e0b;
+  }
+  .alert-card.card-safe .a-reasons-box {
+    background: rgba(16, 185, 129, 0.06);
+    border-color: rgba(16, 185, 129, 0.25);
+  }
+  .alert-card.card-safe .a-reasons-header {
+    color: #10b981;
+  }
+  .alert-card.card-safe .a-reasons-list li::marker {
+    color: #10b981;
   }
   .a-scrutiny-header {
     display: flex;
@@ -714,7 +1073,7 @@
       grid-template-columns: 1fr;
     }
     .stats {
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(2, 1fr);
     }
   }
 </style>

@@ -19,9 +19,56 @@ from app.models.schemas import (
     ActionResponse,
 )
 
-logger = structlog.get_logger("hellofin.tng")
+logger = structlog.get_logger("fakeout.tng")
 
 router = APIRouter()
+
+
+async def _update_alert_status_in_list(redis, txn_id: str, new_status: str) -> bool:
+    """Patch the matching alert entry inside the `caregiver:alerts` Redis list.
+
+    The dashboard polls `caregiver:alerts` (a list of JSON strings) – approving
+    or cancelling a transaction must mutate THIS list, otherwise the dashboard
+    keeps showing the alert as "held" until it is trimmed off the end.
+
+    Returns True when an entry was updated, False otherwise.
+    """
+    try:
+        raw_alerts = await redis.lrange("caregiver:alerts", 0, 99)
+    except Exception as e:
+        logger.error("caregiver_alerts_lrange_failed", error=str(e))
+        return False
+
+    for idx, raw in enumerate(raw_alerts):
+        try:
+            data = json.loads(raw)
+        except Exception:
+            continue
+        if data.get("txn_id") != txn_id:
+            continue
+        data["status"] = new_status
+        try:
+            await redis.lset("caregiver:alerts", idx, json.dumps(data))
+            logger.info(
+                "caregiver_alert_status_synced",
+                txn_id=txn_id,
+                new_status=new_status,
+                index=idx,
+            )
+            return True
+        except Exception as e:
+            logger.error(
+                "caregiver_alert_lset_failed",
+                txn_id=txn_id,
+                error=str(e),
+            )
+            return False
+    logger.warning(
+        "caregiver_alert_not_found_in_list",
+        txn_id=txn_id,
+        new_status=new_status,
+    )
+    return False
 
 
 @router.post("/tng/hold", response_model=HoldResponse)
@@ -128,6 +175,7 @@ async def approve_transaction(request: Request, txn_id: str):
     await redis.hset(f"txn:{txn_id}", "status", "approved")
     await redis.srem("txn:pending", txn_id)
     await redis.delete(f"txn:timer:{txn_id}")
+    await _update_alert_status_in_list(redis, txn_id, "approved")
 
     logger.info("transaction_approved", txn_id=txn_id)
 
@@ -159,6 +207,7 @@ async def cancel_transaction(request: Request, txn_id: str):
     await redis.hset(f"txn:{txn_id}", "status", "cancelled")
     await redis.srem("txn:pending", txn_id)
     await redis.delete(f"txn:timer:{txn_id}")
+    await _update_alert_status_in_list(redis, txn_id, "cancelled")
 
     logger.info("transaction_cancelled", txn_id=txn_id)
 

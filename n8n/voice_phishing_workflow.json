@@ -1,5 +1,5 @@
 {
-  "name": "HelloFin – OpenClaw Voice Phishing Pipeline",
+  "name": "Fakeout – OpenClaw Voice Phishing Pipeline",
   "nodes": [
     {
       "parameters": {
@@ -19,7 +19,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nconst messageType = body.message_type || 'unknown';\nconst sender = String(body.sender_phone || 'unknown');\nconst timestamp = body.timestamp || String(Date.now());\nconst pushName = body.push_name || 'Unknown';\nconst text = body.text || '';\nconst duration = parseInt(body.duration || '0');\n\n// Check if binary audio data came through\nconst binaryKeys = Object.keys($input.first().binary || {});\nconst hasBinary = binaryKeys.length > 0;\n\nconsole.log(`[HelloFin] 🚨 Intercepted from +${sender} (${pushName})`);\nconsole.log(`[HelloFin] Type: ${messageType} | Audio: ${hasBinary} | Text: \"${text.substring(0,60)}\"`);\n\nreturn [{\n  json: { message_type: messageType, sender_phone: sender, timestamp, push_name: pushName, text, duration, has_audio: hasBinary },\n  binary: $input.first().binary\n}];"
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nconst messageType = body.message_type || 'unknown';\nconst sender = String(body.sender_phone || 'unknown');\nconst timestamp = body.timestamp || String(Date.now());\nconst pushName = body.push_name || 'Unknown';\nconst text = body.text || '';\nconst duration = parseInt(body.duration || '0');\n\n// Check if binary audio data came through\nconst binaryKeys = Object.keys($input.first().binary || {});\nconst hasBinary = binaryKeys.length > 0;\n\nconsole.log(`[Fakeout] 🚨 Intercepted from +${sender} (${pushName})`);\nconsole.log(`[Fakeout] Type: ${messageType} | Audio: ${hasBinary} | Text: \"${text.substring(0,60)}\"`);\n\nreturn [{\n  json: { message_type: messageType, sender_phone: sender, timestamp, push_name: pushName, text, duration, has_audio: hasBinary },\n  binary: $input.first().binary\n}];"
       },
       "id": "n2-extract",
       "name": "Extract Message",
@@ -90,7 +90,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Merge results from voice or text path\nconst data = $input.first().json;\nconst riskScore = data.risk_score || 0;\nconst status = data.status || 'cleared';\nconst txnId = data.txn_id || 'unknown';\n\nconsole.log(`[HelloFin] ✅ Risk Score: ${riskScore} | Status: ${status} | TXN: ${txnId}`);\n\nreturn [{ json: { ...data, risk_score: riskScore, status, txn_id: txnId } }];"
+        "jsCode": "// Merge results from voice or text path\nconst data = $input.first().json;\nconst riskScore = data.risk_score || 0;\nconst status = data.status || 'cleared';\nconst txnId = data.txn_id || 'unknown';\n\nconsole.log(`[Fakeout] ✅ Risk Score: ${riskScore} | Status: ${status} | TXN: ${txnId}`);\n\nreturn [{ json: { ...data, risk_score: riskScore, status, txn_id: txnId } }];"
       },
       "id": "n6-merge",
       "name": "Log Result",

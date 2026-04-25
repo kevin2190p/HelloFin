@@ -1,5 +1,5 @@
 {
-  "name": "HelloFin – WhatsApp Webhook Verification",
+  "name": "Fakeout – WhatsApp Webhook Verification",
   "nodes": [
     {
       "parameters": {
@@ -13,12 +13,12 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1.1,
       "position": [200, 340],
-      "webhookId": "hellofin-wa-verify"
+      "webhookId": "fakeout-wa-verify"
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Meta sends: hub.mode, hub.challenge, hub.verify_token\nconst query = $input.first().json.query || $input.first().json;\nconst mode = query['hub.mode'];\nconst token = query['hub.verify_token'];\nconst challenge = query['hub.challenge'];\n\n// IMPORTANT: Change this to match your WHATSAPP_VERIFY_TOKEN in .env\nconst VERIFY_TOKEN = 'hellofin-webhook-verify-2026';\n\nif (mode === 'subscribe' && token === VERIFY_TOKEN) {\n  return [{ json: { challenge, verified: true } }];\n}\n\nreturn [{ json: { challenge: '', verified: false, error: 'Token mismatch' } }];"
+        "jsCode": "// Meta sends: hub.mode, hub.challenge, hub.verify_token\nconst query = $input.first().json.query || $input.first().json;\nconst mode = query['hub.mode'];\nconst token = query['hub.verify_token'];\nconst challenge = query['hub.challenge'];\n\n// IMPORTANT: Change this to match your WHATSAPP_VERIFY_TOKEN in .env\nconst VERIFY_TOKEN = 'fakeout-webhook-verify-2026';\n\nif (mode === 'subscribe' && token === VERIFY_TOKEN) {\n  return [{ json: { challenge, verified: true } }];\n}\n\nreturn [{ json: { challenge: '', verified: false, error: 'Token mismatch' } }];"
       },
       "id": "b1b2c3d4-0001-4000-8000-000000000002",
       "name": "Validate Token",

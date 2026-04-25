@@ -9,7 +9,7 @@ from fastapi import APIRouter, Request, HTTPException
 from app.services.whisper_client import transcribe_audio
 from app.services.analysis_service import process_message
 
-logger = structlog.get_logger("hellofin.telegram")
+logger = structlog.get_logger("fakeout.telegram")
 
 router = APIRouter()
 
@@ -113,7 +113,7 @@ async def handle_telegram_update(update: dict, app):
         
         # Build the structured output exactly as requested
         structured_text = (
-            f"🧾 HelloFin Analysis Result\n\n"
+            f"🧾 Fakeout Analysis Result\n\n"
             f"Input:\n{msg_content}\n\n"
             f"📊 Status: Processed Successfully\n\n"
             f"--- AI VERDICT ---\n"
@@ -123,7 +123,7 @@ async def handle_telegram_update(update: dict, app):
         )
 
         if score >= 50:
-            header = "🚨 HelloFin RISK ALERT!\n\n"
+            header = "🚨 Fakeout RISK ALERT!\n\n"
             await send_telegram_reply(chat_id, header + structured_text, token)
         else:
             header = "✅ Message Scanned.\n\n"

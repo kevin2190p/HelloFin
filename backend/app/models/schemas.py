@@ -27,6 +27,7 @@ class WebhookResponse(BaseModel):
     translation: Optional[str] = None
     risk_score: int
     risk_factors: list[dict]
+    risk_reasons: list[str] = []
     status: str
     auto_cancel_after_sec: Optional[int] = None
 
@@ -52,6 +53,7 @@ class CaregiverAlert(BaseModel):
     sender_phone: str = "unknown"
     transaction_amount: float = 0.0
     reason: str = ""
+    risk_reasons: list[str] = []
     timestamp: float = 0.0
     status: str = "pending"
     transcript: Optional[str] = None
@@ -71,6 +73,7 @@ class TransactionRecord(BaseModel):
     translation: Optional[str] = None
     risk_score: int
     risk_factors: list[dict] = []
+    risk_reasons: list[str] = []
     is_new_payee: bool = False
     transaction_amount: float = 0.0
     status: str = "pending"
@@ -80,6 +83,7 @@ class TransactionRecord(BaseModel):
         """Serialize for Redis HSET (all values must be strings)."""
         d = self.model_dump()
         d["risk_factors"] = json.dumps(d["risk_factors"])
+        d["risk_reasons"] = json.dumps(d["risk_reasons"])
         d["is_new_payee"] = str(d["is_new_payee"])
         d["transaction_amount"] = str(d["transaction_amount"])
         d["risk_score"] = str(d["risk_score"])

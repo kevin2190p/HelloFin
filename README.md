@@ -1,8 +1,8 @@
-# 🛡️ HelloFin – Voice Phishing Detection System
+# 🛡️ Fakeout – Voice Phishing Detection System
 
 > **TNG Digital FINHACK 2026** | Bank-grade voice phishing detection with multi-cloud security
 
-HelloFin intercepts WhatsApp voice notes in real-time, transcribes them using OpenAI Whisper, detects phishing patterns with a multi-factor risk engine, and holds suspicious transactions — giving caregivers the power to block scams before money moves.
+Fakeout intercepts WhatsApp voice notes in real-time, transcribes them using OpenAI Whisper, detects phishing patterns with a multi-factor risk engine, and holds suspicious transactions — giving caregivers the power to block scams before money moves.
 
 ## 🎬 Demo Flow
 
@@ -67,7 +67,7 @@ Services will be available at:
 ## 📁 Project Structure
 
 ```
-HelloFin/
+Fakeout/
 ├── .env                          # Environment variables (gitignored)
 ├── .gitignore
 ├── docker-compose.yml

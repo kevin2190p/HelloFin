@@ -3,7 +3,7 @@ import httpx
 import structlog
 from pathlib import Path
 
-logger = structlog.get_logger("hellofin.whisper")
+logger = structlog.get_logger("fakeout.whisper")
 
 GROQ_AUDIO_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
 HF_WHISPER_URL = "https://api-inference.huggingface.co/models/openai/whisper-large-v3"

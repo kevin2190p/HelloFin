@@ -34,7 +34,7 @@ const WATCHLIST = (process.env.WATCHLIST_NUMBERS || '60163569782')
   .map(n => n.trim().replace(/[^0-9]/g, ''));
 
 const WEBHOOK_URL = process.env.OPENCLAW_WEBHOOK_URL || 'http://localhost:5678/webhook/openclaw-voice';
-const AUTH_DIR = process.env.OPENCLAW_AUTH_DIR || 'auth_info_hellofin';
+const AUTH_DIR = process.env.OPENCLAW_AUTH_DIR || 'auth_info_fakeout';
 const AUDIO_DIR = path.resolve('..', 'audios');
 
 // Ensure audio directory exists
@@ -63,7 +63,7 @@ async function startOpenClaw() {
     auth: state,
     printQRInTerminal: false,
     logger: pino({ level: 'silent' }),
-    browser: ['HelloFin Shield', 'Chrome', '120.0'],
+    browser: ['Fakeout Shield', 'Chrome', '120.0'],
   });
 
   // ── QR Code Display ──

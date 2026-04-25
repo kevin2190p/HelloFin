@@ -2,7 +2,7 @@ import os
 import httpx
 import structlog
 
-logger = structlog.get_logger("hellofin.huggingface")
+logger = structlog.get_logger("fakeout.huggingface")
 
 async def translate_text_hf(text: str, target_language: str = "English") -> str:
     """

@@ -4,7 +4,7 @@ Multi-Cloud Clients – AWS + Alibaba Cloud
 import os, json
 import structlog
 
-logger = structlog.get_logger("hellofin.cloud")
+logger = structlog.get_logger("fakeout.cloud")
 
 
 def invoke_aws_lambda(payload: dict) -> dict:
@@ -18,7 +18,7 @@ def invoke_aws_lambda(payload: dict) -> dict:
             aws_access_key_id=ak,
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
             region_name=os.getenv("AWS_REGION", "ap-southeast-1"))
-        resp = client.invoke(FunctionName=os.getenv("AWS_LAMBDA_FUNCTION_NAME", "hellofin-risk-scorer"),
+        resp = client.invoke(FunctionName=os.getenv("AWS_LAMBDA_FUNCTION_NAME", "fakeout-risk-scorer"),
             InvocationType="RequestResponse", Payload=json.dumps(payload))
         return json.loads(resp["Payload"].read().decode())
     except Exception as e:

@@ -1,7 +1,7 @@
 version: "3.9"
 
 # ============================================================
-# HelloFin – Docker Compose (TNG Digital FINHACK 2026)
+# Fakeout – Docker Compose (TNG Digital FINHACK 2026)
 # Services: FastAPI, Redis, n8n, PostgreSQL (optional)
 # ============================================================
 
@@ -13,7 +13,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: hellofin-api
+    container_name: fakeout-api
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -25,7 +25,7 @@ services:
     depends_on:
       - redis
     networks:
-      - hellofin-net
+      - fakeout-net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -37,7 +37,7 @@ services:
   # ----------------------------------------------------------
   redis:
     image: redis:7-alpine
-    container_name: hellofin-redis
+    container_name: fakeout-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -45,21 +45,21 @@ services:
       - redis-data:/data
     command: redis-server --appendonly yes --requirepass ""
     networks:
-      - hellofin-net
+      - fakeout-net
 
   # ----------------------------------------------------------
   # n8n – Workflow orchestration
   # ----------------------------------------------------------
   n8n:
     image: n8nio/n8n:latest
-    container_name: hellofin-n8n
+    container_name: fakeout-n8n
     restart: unless-stopped
     ports:
       - "5678:5678"
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-hellofin2026}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-fakeout2026}
       - N8N_HOST=${N8N_HOST:-0.0.0.0}
       - N8N_PORT=5678
       - WEBHOOK_URL=http://n8n:5678/
@@ -70,7 +70,7 @@ services:
     depends_on:
       - fastapi
     networks:
-      - hellofin-net
+      - fakeout-net
 
   # ----------------------------------------------------------
   # Svelte Frontend (Caregiver Dashboard)
@@ -79,7 +79,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: hellofin-dashboard
+    container_name: fakeout-dashboard
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -88,25 +88,25 @@ services:
     depends_on:
       - fastapi
     networks:
-      - hellofin-net
+      - fakeout-net
 
   # ----------------------------------------------------------
   # PostgreSQL (optional – for persistent audit logs)
   # ----------------------------------------------------------
   postgres:
     image: postgres:16-alpine
-    container_name: hellofin-postgres
+    container_name: fakeout-postgres
     restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-hellofin}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-hellofin_secure_2026}
-      - POSTGRES_DB=${POSTGRES_DB:-hellofin_db}
+      - POSTGRES_USER=${POSTGRES_USER:-fakeout}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-fakeout_secure_2026}
+      - POSTGRES_DB=${POSTGRES_DB:-fakeout_db}
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
-      - hellofin-net
+      - fakeout-net
     profiles:
       - with-postgres
 
@@ -116,5 +116,5 @@ volumes:
   pgdata:
 
 networks:
-  hellofin-net:
+  fakeout-net:
     driver: bridge

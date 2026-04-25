@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
-# HelloFin – One-Command Demo Launcher
+# Fakeout – One-Command Demo Launcher
 # TNG Digital FINHACK 2026
 # ═══════════════════════════════════════════════════════════════
 #
@@ -38,7 +38,7 @@ banner() {
   echo ""
 }
 
-log() { echo -e "${GREEN}[HelloFin]${RESET} $1"; }
+log() { echo -e "${GREEN}[Fakeout]${RESET} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${RESET} $1"; }
 error() { echo -e "${RED}[ERROR]${RESET} $1"; }
 
@@ -57,7 +57,7 @@ banner
 
 # ── Check .env ──────────────────────────────────────────────
 if [ ! -f "$SCRIPT_DIR/.env" ]; then
-  error ".env file not found! Run from the HelloFin directory."
+  error ".env file not found! Run from the Fakeout directory."
   exit 1
 fi
 
@@ -134,7 +134,7 @@ cd "$SCRIPT_DIR"
 
 N8N_BASIC_AUTH_ACTIVE=true \
 N8N_BASIC_AUTH_USER="${N8N_BASIC_AUTH_USER:-admin}" \
-N8N_BASIC_AUTH_PASSWORD="${N8N_BASIC_AUTH_PASSWORD:-hellofin2026}" \
+N8N_BASIC_AUTH_PASSWORD="${N8N_BASIC_AUTH_PASSWORD:-fakeout2026}" \
   npx n8n start \
   > "$SCRIPT_DIR/logs/n8n.log" 2>&1 &
 PID_N8N=$!
@@ -188,7 +188,7 @@ sleep 2
 # ─────────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-echo -e "${BOLD}${GREEN}  ✅ ALL SYSTEMS GO — HelloFin is LIVE!                   ${RESET}"
+echo -e "${BOLD}${GREEN}  ✅ ALL SYSTEMS GO — Fakeout is LIVE!                   ${RESET}"
 echo -e "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 echo ""
 echo -e "  📊 Dashboard:       ${CYAN}http://localhost:3000${RESET}"

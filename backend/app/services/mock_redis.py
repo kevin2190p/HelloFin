@@ -62,6 +62,13 @@ class MockRedis:
             return lst[start:]
         return lst[start : end + 1]
 
+    async def lset(self, name, index, value):
+        lst = self.lists.get(name)
+        if lst is None or index >= len(lst) or index < -len(lst):
+            raise IndexError(f"index out of range for list '{name}'")
+        lst[index] = value
+        return True
+
     async def ltrim(self, name, start, end):
         if name in self.lists:
             lst = self.lists[name]

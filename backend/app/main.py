@@ -1,5 +1,5 @@
 """
-HelloFin – FastAPI Application Entry Point
+Fakeout – FastAPI Application Entry Point
 ==========================================
 RELOAD TRIGGER: 2026-04-26 01:05:00
 """
@@ -20,7 +20,7 @@ import structlog
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import webhook, risk, tng, chat, audio_risk, telegram
+from app.routers import webhook, risk, tng, chat, audio_risk, telegram, security
 from app.services.audit_logger import AuditLogger
 from app.services.mock_redis import MockRedis
 from app.routers.telegram import start_telegram_polling
@@ -43,7 +43,7 @@ structlog.configure(
     cache_logger_on_first_use=True,
 )
 
-logger = structlog.get_logger("hellofin")
+logger = structlog.get_logger("fakeout")
 
 
 @asynccontextmanager
@@ -64,7 +64,7 @@ async def lifespan(app: FastAPI):
         app.state.redis = MockRedis()
         
     app.state.audit = AuditLogger()
-    logger.info("hellofin_startup")
+    logger.info("fakeout_startup")
     
     async def polling_wrapper():
         while True:
@@ -86,11 +86,11 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
     await app.state.redis.close()
-    logger.info("hellofin_shutdown")
+    logger.info("fakeout_shutdown")
 
 # --- RESTART TRIGGER: 2026-04-25 15:12:00 ---
 app = FastAPI(
-    title="HelloFin – Voice Phishing Detection",
+    title="Fakeout – Voice Phishing Detection",
     description="Bank-grade voice phishing detection for TNG Digital FINHACK 2026",
     version="1.0.0",
     lifespan=lifespan,
@@ -153,6 +153,7 @@ app.include_router(tng.router, tags=["TNG eWallet & Caregiver"])
 app.include_router(chat.router, prefix="/chat", tags=["Chat Widget"])
 app.include_router(audio_risk.router, prefix="/risk", tags=["Voice Risk Detection"])
 app.include_router(telegram.router, prefix="/webhook/telegram", tags=["Telegram Webhook"])
+app.include_router(security.router, prefix="/security", tags=["Multi-Cloud KMS"])
 
 
 # ────────────────────────────────────────────
@@ -161,7 +162,7 @@ app.include_router(telegram.router, prefix="/webhook/telegram", tags=["Telegram 
 @app.get("/", include_in_schema=False)
 async def root():
     """Redirect root to API docs."""
-    return {"message": "HelloFin API is running. Visit /docs for documentation."}
+    return {"message": "Fakeout API is running. Visit /docs for documentation."}
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -173,4 +174,4 @@ async def favicon():
 @app.get("/health", tags=["System"])
 async def health_check():
     """Health endpoint for Docker and load balancer probes."""
-    return {"status": "healthy", "service": "hellofin", "version": "1.0.0"}
+    return {"status": "healthy", "service": "fakeout", "version": "1.0.0"}

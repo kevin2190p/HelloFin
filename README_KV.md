@@ -37,7 +37,7 @@ Jane (FastAPI) → Shawn (AWS/Alibaba) → SY (Dashboard)
 
 ### Step 1: Install OpenClaw
 ```bash
-cd ~/Desktop/HelloFin/openclaw
+cd ~/Desktop/Fakeout/openclaw
 npm install
 ```
 
@@ -51,7 +51,7 @@ brew services start redis
 
 **Tab 1 – OpenClaw (WhatsApp Bridge):**
 ```bash
-cd ~/Desktop/HelloFin/openclaw
+cd ~/Desktop/Fakeout/openclaw
 npm start
 ```
 A QR code will appear. **Scan it with your WhatsApp** (Settings > Linked Devices > Link a Device).
@@ -64,7 +64,7 @@ Then open http://localhost:5678, import `n8n/voice_phishing_workflow.json`, and 
 
 **Tab 3 – Jane's Backend (FastAPI):**
 ```bash
-cd ~/Desktop/HelloFin/backend
+cd ~/Desktop/Fakeout/backend
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
@@ -72,7 +72,7 @@ uvicorn app.main:app --reload --port 8000
 
 **Tab 4 – SY's Dashboard (Svelte):**
 ```bash
-cd ~/Desktop/HelloFin/frontend
+cd ~/Desktop/Fakeout/frontend
 npm install && npm run dev
 ```
 
@@ -121,7 +121,7 @@ KV (OpenClaw + n8n)
 
 | Problem | Fix |
 |---------|-----|
-| QR code not showing | Delete `auth_info_hellofin/` folder and restart OpenClaw |
+| QR code not showing | Delete `auth_info_fakeout/` folder and restart OpenClaw |
 | "Forward failed" | Make sure n8n is running and workflow is Active |
 | No messages detected | Check that the scammer number is in `WATCHLIST_NUMBERS` in `.env` |
 | Backend errors | Make sure Redis is running: `brew services start redis` |

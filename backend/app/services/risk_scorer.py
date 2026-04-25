@@ -6,7 +6,7 @@ Implements the 8-section professional scam detection table with specific weights
 
 import structlog
 
-logger = structlog.get_logger("hellofin.risk_scorer")
+logger = structlog.get_logger("fakeout.risk_scorer")
 
 # Define the tables with their categories
 SCAM_TABLES = {

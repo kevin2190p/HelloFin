@@ -4,7 +4,7 @@ from app.services.whisper_client import transcribe_audio
 from app.services.translation import translate_text
 from app.services.llm_analyzer import analyze_with_qwen
 
-logger = structlog.get_logger("hellofin.audio_risk")
+logger = structlog.get_logger("fakeout.audio_risk")
 
 router = APIRouter()
 
