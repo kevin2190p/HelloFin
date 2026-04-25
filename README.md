@@ -5,6 +5,18 @@
 
 **Track:** Security & Fraud · **Hackathon:** TNG FINHACK 2026
 
+### 🔗 Live demo
+
+**👉 [https://fakeout-tng-finhack.netlify.app](https://fakeout-tng-finhack.netlify.app)**
+
+Open the link, click **Test Cloud** on the verification screen, and watch real AWS + Alibaba Cloud request IDs come back live.
+
+| Resource | Link |
+|---|---|
+| Live demo | https://fakeout-tng-finhack.netlify.app |
+| AWS Lambda monitor | [`scamsense-risk-event` (ap-southeast-5)](https://ap-southeast-5.console.aws.amazon.com/lambda/home?region=ap-southeast-5#/functions/scamsense-risk-event?tab=monitor) |
+| Alibaba OSS bucket | [`scamsense-demo-risk-events` (ap-southeast-3)](https://oss.console.aliyun.com/bucket/oss-ap-southeast-3/scamsense-demo-risk-events/object) |
+
 ---
 
 ## 1. Project overview
