@@ -50,15 +50,15 @@ FAKEOUT is a mobile application designed to protect Malaysians from elder fraud 
 
 ## Screenshots
 
-![Screenshot 1](https://drive.google.com/file/d/1wxcQoGzXgIAgf3U5DbZbIgC0lqee27Pn/view?usp=sharing)
+![Screenshot 1](https://drive.google.com/uc?export=view&id=1wxcQoGzXgIAgf3U5DbZbIgC0lqee27Pn)
 
-![Screenshot 2](https://drive.google.com/file/d/1dm1afJ38XWoURnaBCzB7sTDH9p9D49m4/view?usp=sharing)
+![Screenshot 2](https://drive.google.com/uc?export=view&id=1dm1afJ38XWoURnaBCzB7sTDH9p9D49m4)
 
-![Screenshot 3](https://drive.google.com/file/d/1SLcYfbup_vPl4WH8cFQSiNqcnOKRKdcS/view?usp=sharing)
+![Screenshot 3](https://drive.google.com/uc?export=view&id=1SLcYfbup_vPl4WH8cFQSiNqcnOKRKdcS)
 
-![Screenshot 4](https://drive.google.com/file/d/1HfuY42gvqI0Q2agH-xiItMwmO5iirikN/view?usp=sharing)
+![Screenshot 4](https://drive.google.com/uc?export=view&id=1HfuY42gvqI0Q2agH-xiItMwmO5iirikN)
 
-![Screenshot 5](https://drive.google.com/file/d/1X_BQGtnBvoMyArsEIPFeJq8jPAyftjwQ/view?usp=sharing)
+![Screenshot 5](https://drive.google.com/uc?export=view&id=1X_BQGtnBvoMyArsEIPFeJq8jPAyftjwQ)
 
 
 ## Videos
