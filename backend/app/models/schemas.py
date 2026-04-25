@@ -29,6 +29,7 @@ class WebhookResponse(BaseModel):
     risk_factors: list[dict]
     status: str
     auto_cancel_after_sec: Optional[int] = None
+    gemini_reason: Optional[str] = None
 
 
 class HoldRequest(BaseModel):
@@ -75,6 +76,7 @@ class TransactionRecord(BaseModel):
     transaction_amount: float = 0.0
     status: str = "pending"
     timestamp: float = 0.0
+    gemini_reason: Optional[str] = None
 
     def model_dump_redis(self) -> dict:
         """Serialize for Redis HSET (all values must be strings)."""
