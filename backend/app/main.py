@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import webhook, risk, tng
+from app.routers import webhook, risk, tng, chat
 from app.services.audit_logger import AuditLogger
 
 load_dotenv()
@@ -107,6 +107,7 @@ async def audit_middleware(request: Request, call_next):
 app.include_router(webhook.router, prefix="/webhook", tags=["Webhook"])
 app.include_router(risk.router, prefix="/risk", tags=["Risk Scoring"])
 app.include_router(tng.router, tags=["TNG eWallet & Caregiver"])
+app.include_router(chat.router, prefix="/chat", tags=["Chat Widget"])
 
 
 # ────────────────────────────────────────────

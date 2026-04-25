@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HelloFin Shield – Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;background:#0a0e1a;color:#e2e8f0;min-height:100vh;overflow-x:hidden}
+
+  /* ─── BG ─── */
+  .bg{position:fixed;inset:0;z-index:0;
+    background-image:linear-gradient(rgba(99,102,241,.04) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(99,102,241,.04) 1px,transparent 1px);
+    background-size:48px 48px}
+  .glow{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none}
+  .g1{width:500px;height:500px;top:-100px;right:-100px;background:rgba(59,130,246,.15);animation:drift 20s ease-in-out infinite}
+  .g2{width:400px;height:400px;bottom:-80px;left:-80px;background:rgba(16,185,129,.12);animation:drift 25s ease-in-out infinite reverse}
+  @keyframes drift{0%,100%{transform:translate(0,0)}50%{transform:translate(40px,30px)}}
+
+  /* ─── Layout ─── */
+  .wrap{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:0 24px 60px}
+
+  /* ─── Header ─── */
+  header{padding:24px 0 20px;border-bottom:1px solid rgba(99,102,241,.15);margin-bottom:32px;display:flex;justify-content:space-between;align-items:center}
+  .logo h1{font-size:1.7rem;font-weight:800;color:#f1f5f9}
+  .logo h1 span{background:linear-gradient(135deg,#6EE7B7,#3B82F6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .logo p{font-size:.75rem;color:#64748b;margin-top:3px}
+  .badges{display:flex;gap:10px;align-items:center}
+  .badge{padding:5px 14px;border-radius:20px;font-size:.72rem;font-weight:700}
+  .badge-live{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);display:flex;align-items:center;gap:6px}
+  .badge-demo{background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3)}
+  .pdot{width:7px;height:7px;border-radius:50%;background:#ef4444;animation:pulse 1.5s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* ─── Grid ─── */
+  .grid{display:grid;grid-template-columns:420px 1fr;gap:28px;align-items:start}
+
+  /* ─── WhatsApp Shell ─── */
+  .wa{width:100%;height:600px;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;
+    background:#0b141a;box-shadow:0 24px 80px rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.06)}
+  .wa-hdr{background:#1f2c34;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+  .wa-av{width:40px;height:40px;border-radius:50%;background:#2a3942;display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+  .wa-nm{font-size:.88rem;font-weight:600;color:#e9edef}
+  .wa-sub{font-size:.7rem;color:#8696a0;display:flex;align-items:center;gap:5px;margin-top:2px}
+  .ldot{width:6px;height:6px;border-radius:50%;background:#ef4444;animation:pulse 1.5s infinite}
+  .wa-ic{margin-left:auto;display:flex;gap:16px;color:#8696a0;font-size:1.1rem}
+  .wa-body{flex:1;overflow-y:auto;padding:12px;background:#0b141a;display:flex;flex-direction:column;gap:4px;
+    background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23182229' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")}
+  .wa-body::-webkit-scrollbar{width:4px}
+  .wa-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+  .wa-date{text-align:center;font-size:.68rem;color:#8696a0;background:rgba(17,27,33,.8);border-radius:8px;padding:3px 10px;margin:4px auto 8px;width:fit-content}
+  .wa-row{display:flex;margin-bottom:2px;animation:msgIn .25s ease-out}
+  @keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .wa-row.me{justify-content:flex-end}
+  .wa-row.them{justify-content:flex-start}
+  .bubble{max-width:80%;border-radius:8px;padding:7px 10px 5px;position:relative;transition:box-shadow .3s}
+  .bubble.me{background:#005c4b;border-top-right-radius:2px;color:#e9edef}
+  .bubble.them{background:#1f2c34;border-top-left-radius:2px;color:#e9edef}
+  .bubble.risk-hi{background:rgba(239,68,68,.18)!important;border:1px solid rgba(239,68,68,.5);box-shadow:0 0 24px rgba(239,68,68,.25)}
+  .bubble.risk-mid{background:rgba(251,191,36,.12)!important;border:1px solid rgba(251,191,36,.35)}
+  .btext{font-size:.87rem;line-height:1.45;margin-bottom:2px;word-break:break-word}
+  .btime{font-size:.63rem;color:#8696a0;float:right;margin-left:8px;margin-top:2px}
+
+  /* Voice note */
+  .voice-row{display:flex;align-items:center;gap:10px;padding:4px 0}
+  .voice-av{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem}
+  .waveform{display:flex;align-items:center;gap:2px;height:28px;flex:1}
+  .wbar{width:3px;background:#25d366;border-radius:2px;animation:wave 1.2s ease-in-out infinite alternate}
+  @keyframes wave{0%{transform:scaleY(.3)}100%{transform:scaleY(1)}}
+  .vmeta{display:flex;justify-content:space-between;font-size:.67rem;color:#8696a0;margin-top:3px}
+
+  /* Scanning */
+  .scanning{display:flex;align-items:center;gap:8px;margin-top:6px;padding:5px 8px;border-radius:6px;
+    background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3)}
+  .sdots{display:flex;gap:4px}
+  .sdot{width:5px;height:5px;border-radius:50%;background:#818cf8;animation:sp 1s ease-in-out infinite}
+  .sdot:nth-child(2){animation-delay:.2s}
+  .sdot:nth-child(3){animation-delay:.4s}
+  @keyframes sp{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+  .stxt{font-size:.68rem;color:#818cf8;font-weight:600}
+
+  /* Risk badge */
+  .rbadge{display:flex;align-items:center;gap:8px;margin-top:7px;padding:6px 10px;border-radius:8px;animation:bIn .4s ease-out}
+  @keyframes bIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+  .rbadge.hi{background:rgba(239,68,68,.22);border:1px solid rgba(239,68,68,.55)}
+  .rbadge.mid{background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4)}
+  .rbadge.ok{background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3)}
+  .rscore{font-size:.8rem;font-weight:800;color:#f1f5f9;display:block}
+  .rtype{font-size:.63rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;display:block}
+
+  /* Input bar */
+  .wa-inp{background:#1f2c34;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+  .inp-field{flex:1;background:#2a3942;border-radius:24px;padding:8px 16px;font-size:.85rem;color:#8696a0}
+  .inp-mic{width:40px;height:40px;border-radius:50%;background:#25d366;display:flex;align-items:center;justify-content:center;font-size:1rem}
+
+  /* ─── Right Panel ─── */
+  .rp-title{font-size:1rem;font-weight:700;color:#f1f5f9;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .eng-card{background:rgba(30,41,59,.6);border:1px solid rgba(99,102,241,.12);border-radius:16px;padding:18px;margin-bottom:20px}
+  .eng-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(99,102,241,.06);font-size:.82rem}
+  .eng-row:last-child{border:none}
+  .elbl{color:#64748b;font-weight:500}
+  .eval{font-weight:600;color:#cbd5e1}
+  .eval.g{color:#34d399}.eval.r{color:#f87171}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px}
+  .chip{background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:#818cf8;
+    padding:3px 11px;border-radius:20px;font-size:.7rem;font-weight:600}
+
+  /* Alert card */
+  .alert-card{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.35);border-radius:16px;
+    padding:20px;animation:slideIn .4s ease-out;display:none}
+  .alert-card.show{display:block}
+  @keyframes slideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  .ac-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .ac-tag{background:rgba(239,68,68,.2);color:#f87171;padding:4px 12px;border-radius:8px;font-size:.72rem;font-weight:700}
+  .ac-score{font-size:2.2rem;font-weight:800;color:#f87171}
+  .ac-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(239,68,68,.1);font-size:.82rem}
+  .ac-row:last-of-type{border:none}
+  .ac-lbl{color:#94a3b8}.ac-val{color:#fca5a5;font-weight:600}
+  .ac-transcript{background:rgba(239,68,68,.06);border-radius:8px;padding:10px;margin:10px 0;font-size:.78rem;color:#fca5a5;line-height:1.5}
+  .ac-btns{display:flex;gap:10px;margin-top:14px}
+  .btn{flex:1;padding:10px;border:none;border-radius:10px;font-size:.82rem;font-weight:700;cursor:pointer;transition:all .2s}
+  .btn-block{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3)}
+  .btn-block:hover{background:rgba(239,68,68,.3);transform:translateY(-1px)}
+  .btn-ok{background:rgba(52,211,153,.1);color:#34d399;border:1px solid rgba(52,211,153,.25)}
+  .btn-ok:hover{background:rgba(52,211,153,.2);transform:translateY(-1px)}
+
+  .ctrl-btns{display:flex;gap:10px;margin-bottom:20px}
+  .ctrl-btn{padding:10px 20px;border-radius:12px;font-size:.82rem;font-weight:700;cursor:pointer;transition:all .2s;border:none}
+  .cb-play{background:linear-gradient(135deg,#6EE7B7,#3B82F6);color:#0a0e1a}
+  .cb-play:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(110,231,183,.3)}
+  .cb-reset{background:rgba(30,41,59,.8);color:#94a3b8;border:1px solid rgba(99,102,241,.2)}
+  .cb-reset:hover{transform:translateY(-2px)}
+
+  footer{text-align:center;padding:40px 0 20px;color:#475569;font-size:.72rem}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="glow g1"></div>
+<div class="glow g2"></div>
+
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <h1>HelloFin<span>Shield</span></h1>
+      <p>Voice Phishing Detection • TNG Digital FINHACK 2026</p>
+    </div>
+    <div class="badges">
+      <span class="badge badge-demo">🎬 DEMO MODE</span>
+      <span class="badge badge-live"><span class="pdot"></span>LIVE SIMULATION</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- WhatsApp Widget -->
+    <div>
+      <p style="font-size:.78rem;color:#64748b;margin-bottom:12px">
+        💬 Intercepted from <strong style="color:#f87171">+60163569782</strong> → <strong style="color:#34d399">+60175727549</strong> (Kevin)
+      </p>
+      <div class="wa">
+        <div class="wa-hdr">
+          <div class="wa-av">👤</div>
+          <div>
+            <div class="wa-nm">Unknown (+60163569782)</div>
+            <div class="wa-sub"><span class="ldot"></span>Scammer — Monitoring ACTIVE</div>
+          </div>
+          <div class="wa-ic"><span>📹</span><span>📞</span><span>⋮</span></div>
+        </div>
+        <div class="wa-body" id="chat">
+          <div class="wa-date">Today</div>
+        </div>
+        <div class="wa-inp">
+          <span style="font-size:1.2rem;color:#8696a0">😊</span>
+          <div class="inp-field">Message</div>
+          <span style="font-size:1.2rem;color:#8696a0">📎</span>
+          <div class="inp-mic">🎤</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div>
+      <div class="ctrl-btns">
+        <button class="ctrl-btn cb-play" onclick="startDemo()">▶ Play Demo Scenario</button>
+        <button class="ctrl-btn cb-reset" onclick="resetDemo()">↺ Reset</button>
+      </div>
+
+      <div class="rp-title">🧠 Detection Engine</div>
+      <div class="eng-card">
+        <div class="eng-row"><span class="elbl">STT Engine</span><span class="eval g">Groq Whisper large-v3</span></div>
+        <div class="eng-row"><span class="elbl">Text Analysis</span><span class="eval g">Qwen3-32B (Groq)</span></div>
+        <div class="eng-row"><span class="elbl">Keyword Engine</span><span class="eval g">200+ Malaysian phrases</span></div>
+        <div class="eng-row"><span class="elbl">Score Fusion</span><span class="eval g">35% KW + 65% LLM</span></div>
+        <div class="eng-row"><span class="elbl">Languages</span><span class="eval">BM · EN · Manglish · 中文</span></div>
+        <div class="eng-row"><span class="elbl">Watchlist</span><span class="eval r">+60163569782</span></div>
+        <div class="eng-row"><span class="elbl">Threshold</span><span class="eval r">Score ≥ 80 → HOLD</span></div>
+      </div>
+
+      <div class="rp-title">🎯 Detects</div>
+      <div class="chips">
+        <span class="chip">Macau Scam</span>
+        <span class="chip">Parcel Scam</span>
+        <span class="chip">Love Scam</span>
+        <span class="chip">Investment Scam</span>
+        <span class="chip">LHDN Scam</span>
+        <span class="chip">Authority Impersonation</span>
+      </div>
+
+      <div class="rp-title">🚨 Live Alert</div>
+      <div class="alert-card" id="alertCard">
+        <div class="ac-hdr">
+          <span class="ac-tag">🔴 CRITICAL — TRANSACTION HELD</span>
+          <span class="ac-score" id="acScore">97</span>
+        </div>
+        <div class="ac-row"><span class="ac-lbl">Scam Type</span><span class="ac-val" id="acType">Macau Scam</span></div>
+        <div class="ac-row"><span class="ac-lbl">Sender</span><span class="ac-val">+60163569782</span></div>
+        <div class="ac-row"><span class="ac-lbl">Keyword Score</span><span class="ac-val" id="acKw">35/100</span></div>
+        <div class="ac-row"><span class="ac-lbl">Qwen3 LLM Score</span><span class="ac-val" id="acLlm">97/100</span></div>
+        <div class="ac-row"><span class="ac-lbl">Final Score</span><span class="ac-val" id="acFinal">🔴 97 — HIGH RISK</span></div>
+        <div class="ac-transcript" id="acTranscript">Transcript will appear here...</div>
+        <div class="ac-btns">
+          <button class="btn btn-block" onclick="blockScammer()">🚫 Block &amp; Cancel</button>
+          <button class="btn btn-ok" onclick="allowTxn()">✅ Allow (Caregiver Override)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<footer>HelloFin Shield v1.0 • TNG Digital FINHACK 2026 • Bank-Grade Voice Phishing Detection</footer>
+
+<script>
+const NOW = () => new Date().toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit'});
+
+const SCRIPT = [
+  { from:'them', type:'text', delay:800,
+    text:'Selamat petang. Saya dari Jabatan Kastam Diraja Malaysia.',
+    score:null },
+  { from:'them', type:'text', delay:3500,
+    text:'Bungkusan anda yang mengandungi barang terlarang telah ditahan di KLIA. Kes jenayah serius telah dibuka.',
+    score:72, scam:'Parcel Scam', kw:42, llm:85 },
+  { from:'me', type:'text', delay:6000,
+    text:'Apa? Saya tidak pesan apa-apa baru-baru ini...' },
+  { from:'them', type:'text', delay:8500,
+    text:'Ini urgent! Transfer RM 4,800 ke akaun selamat kami sekarang: Maybank 5621-4489-0012. Jangan beritahu sesiapa!',
+    score:95, scam:'Authority Impersonation', kw:88, llm:96 },
+  { from:'them', type:'voice', delay:12000, duration:22,
+    text:'Hello, this is Inspector Rajan from PDRM. We have a warrant for your arrest for money laundering. To avoid immediate arrest, you must transfer five thousand ringgit to the safe account. Do not tell your family. This is a confidential police operation. Cooperate or face consequences.',
+    score:97, scam:'Macau Scam', kw:91, llm:99 },
+];
+
+let running = false;
+
+function addMsg(from, type, text, duration) {
+  const chat = document.getElementById('chat');
+  const id = 'msg-' + Math.random().toString(36).slice(2);
+  const isMe = from === 'me';
+  const div = document.createElement('div');
+  div.className = `wa-row ${isMe ? 'me' : 'them'}`;
+  div.id = id;
+
+  if (type === 'voice') {
+    const bars = Array.from({length:20},(_,i)=>`<div class="wbar" style="height:${12+Math.sin(i*.8)*10}px;animation-delay:${i*.05}s"></div>`).join('');
+    div.innerHTML = `<div class="bubble them">
+      <div class="voice-row">
+        <div class="voice-av">👤</div>
+        <div style="flex:1">
+          <div class="waveform">${bars}</div>
+          <div class="vmeta"><span>🎤 ${duration}s</span><span>${NOW()}</span></div>
+        </div>
+      </div>
+      <div class="scanning" id="scan-${id}">
+        <div class="sdots"><span class="sdot"></span><span class="sdot"></span><span class="sdot"></span></div>
+        <span class="stxt">Groq Whisper → Qwen3 Scanning…</span>
+      </div>
+    </div>`;
+  } else {
+    div.innerHTML = `<div class="bubble ${isMe ? 'me' : 'them'}" id="bub-${id}">
+      <p class="btext">${text}</p>
+      <span class="btime">${NOW()} ${isMe ? '✓✓' : ''}</span>
+      ${!isMe ? `<div class="scanning" id="scan-${id}"><div class="sdots"><span class="sdot"></span><span class="sdot"></span><span class="sdot"></span></div><span class="stxt">Qwen3 Analyzing…</span></div>` : ''}
+    </div>`;
+  }
+
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return id;
+}
+
+function applyRisk(msgId, score, scam, kw, llm, transcript) {
+  const scan = document.getElementById(`scan-${msgId}`);
+  const bub = document.querySelector(`#${msgId} .bubble`);
+  if(scan) scan.remove();
+
+  const cls = score >= 80 ? 'hi' : 'mid';
+  const bubCls = score >= 80 ? 'risk-hi' : 'risk-mid';
+  if(bub) bub.classList.add(bubCls);
+
+  const badge = document.createElement('div');
+  badge.className = `rbadge ${cls}`;
+  badge.innerHTML = `<span style="font-size:1.1rem">${score>=80?'🚨':'⚠️'}</span>
+    <div><span class="rscore">${score}/100</span><span class="rtype">${scam}</span></div>`;
+  if(bub) bub.appendChild(badge);
+
+  // Update alert card
+  if(score >= 80) {
+    document.getElementById('alertCard').classList.add('show');
+    document.getElementById('acScore').textContent = score;
+    document.getElementById('acType').textContent = scam;
+    document.getElementById('acKw').textContent = kw + '/100';
+    document.getElementById('acLlm').textContent = llm + '/100';
+    document.getElementById('acFinal').textContent = `🔴 ${score} — HIGH RISK`;
+    document.getElementById('acTranscript').textContent = transcript || '(Voice transcribed by Groq Whisper large-v3)';
+  }
+}
+
+function startDemo() {
+  if(running) return;
+  running = true;
+  document.getElementById('alertCard').classList.remove('show');
+
+  SCRIPT.forEach(step => {
+    setTimeout(() => {
+      const id = addMsg(step.from, step.type, step.text, step.duration);
+      if(step.score !== null && step.from !== 'me') {
+        setTimeout(() => {
+          applyRisk(id, step.score, step.scam, step.kw, step.llm,
+            step.type === 'voice' ? step.text : null);
+        }, 2200);
+      }
+    }, step.delay);
+  });
+
+  setTimeout(() => { running = false; }, 16000);
+}
+
+function resetDemo() {
+  running = false;
+  const chat = document.getElementById('chat');
+  chat.innerHTML = '<div class="wa-date">Today</div>';
+  document.getElementById('alertCard').classList.remove('show');
+}
+
+function blockScammer() {
+  const card = document.getElementById('alertCard');
+  card.style.borderColor = 'rgba(239,68,68,.7)';
+  card.innerHTML = `<div style="text-align:center;padding:20px">
+    <div style="font-size:2rem;margin-bottom:8px">🚫</div>
+    <div style="font-size:1rem;font-weight:700;color:#f87171">Transaction BLOCKED</div>
+    <div style="font-size:.78rem;color:#94a3b8;margin-top:6px">Scammer reported. Transaction cancelled. Caregiver notified.</div>
+  </div>`;
+}
+
+function allowTxn() {
+  const card = document.getElementById('alertCard');
+  card.innerHTML = `<div style="text-align:center;padding:20px">
+    <div style="font-size:2rem;margin-bottom:8px">✅</div>
+    <div style="font-size:1rem;font-weight:700;color:#34d399">Caregiver Override</div>
+    <div style="font-size:.78rem;color:#94a3b8;margin-top:6px">Transaction allowed by caregiver. Audit log saved.</div>
+  </div>`;
+}
+</script>
+</body>
+</html>
