@@ -1,8 +1,7 @@
 """
 HelloFin – FastAPI Application Entry Point
 ==========================================
-Bank-grade voice phishing detection API.
-SOC2-ready audit logging, zero-trust design.
+RELOAD TRIGGER: 2026-04-26 01:05:00
 """
 
 import os
@@ -97,15 +96,6 @@ app = FastAPI(
     redirect_slashes=True,
 )
 
-@app.middleware("http")
-async def add_private_network_header(request: Request, call_next):
-    response = await call_next(request)
-    if request.method == "OPTIONS":
-        response.headers["Access-Control-Allow-Private-Network"] = "true"
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "*"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-    return response
 
 # CORS – allow frontend dashboard
 app.add_middleware(

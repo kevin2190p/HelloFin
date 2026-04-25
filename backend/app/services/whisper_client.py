@@ -25,8 +25,8 @@ async def transcribe_audio(file_path: str, language: str = None) -> str:
             logger.info("stt_attempt_groq", file=path.name)
             async with httpx.AsyncClient(timeout=30.0) as client:
                 with open(path, "rb") as f:
-                    # Rename to .m4a to trick the decoder
-                    files = {"file": ("voice.m4a", f, "audio/mp4")}
+                    # Telegram sends .oga (Opus in Ogg). Groq supports .oga / .ogg.
+                    files = {"file": ("voice.oga", f)}
                     data = {"model": "whisper-large-v3"}
                     if language: data["language"] = language
                     
@@ -38,7 +38,10 @@ async def transcribe_audio(file_path: str, language: str = None) -> str:
                     )
                     if resp.status_code == 200:
                         return resp.json().get("text", "").strip()
-                    logger.warn("groq_stt_failed_falling_back", status=resp.status_code)
+                    
+                    # Detailed error logging to see WHY it's 400
+                    logger.error("groq_stt_api_error", status=resp.status_code, response=resp.text)
+                    logger.warn("groq_stt_failed_falling_back")
         except Exception as e:
             logger.warn("groq_stt_error", error=str(e))
 

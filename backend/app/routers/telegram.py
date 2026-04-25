@@ -40,6 +40,10 @@ async def download_telegram_file(file_id: str, bot_token: str) -> str:
             
         return str(local_path)
 
+@router.get("/version")
+async def get_version():
+    return {"version": "V2.2", "status": "active"}
+
 @router.post("/webhook")
 async def telegram_webhook(request: Request):
     """Webhook endpoint for Telegram."""
@@ -71,6 +75,7 @@ async def handle_telegram_update(update: dict, app):
     logger.info("telegram_update_received", chat_id=chat_id, has_text=bool(text), has_voice=bool(voice))
 
     try:
+        transcript = None
         if voice:
             # Handle Voice
             file_id = voice.get("file_id")
@@ -78,6 +83,7 @@ async def handle_telegram_update(update: dict, app):
             local_path = await download_telegram_file(file_id, token)
             # 2. Transcribe
             transcript = await transcribe_audio(local_path)
+            print(f"[DEBUG] 🎤 VOICE TRANSCRIPT: {transcript}")
             # 3. Analyze
             result = await process_message(
                 redis=redis,
@@ -91,6 +97,7 @@ async def handle_telegram_update(update: dict, app):
                 os.remove(local_path)
         elif text:
             # Handle Text
+            print(f"[DEBUG] 📩 TEXT MESSAGE: {text}")
             result = await process_message(
                 redis=redis,
                 transcript=text,
@@ -101,13 +108,26 @@ async def handle_telegram_update(update: dict, app):
         else:
             return
 
-        # Always reply with the score so the user can see real data
+        msg_content = transcript if voice else text
         score = result.risk_score
+        
+        # Build the structured output exactly as requested
+        structured_text = (
+            f"🧾 Transcription Result\n\n"
+            f"Text:\n{msg_content}\n\n"
+            f"📊 Status: Processed Successfully\n\n"
+            f"--- AI VERDICT ---\n"
+            f"Risk Score: {score}/100\n"
+            f"Type: {result.risk_factors[0]['category'].replace('_', ' ').title() if result.risk_factors else 'Analysis'}\n\n"
+            f"This has been logged to your dashboard."
+        )
+
         if score >= 50:
-            warning = f"🚨 HelloFin RISK ALERT!\n\nRisk Score: {score}/100\nType: {result.risk_factors[0]['category'].replace('_', ' ').title() if result.risk_factors else 'Suspicious'}\n\nThis message has been flagged on your Caregiver Dashboard."
-            await send_telegram_reply(chat_id, warning, token)
+            header = "🚨 HelloFin RISK ALERT!\n\n"
+            await send_telegram_reply(chat_id, header + structured_text, token)
         else:
-            await send_telegram_reply(chat_id, f"✅ Message scanned. Risk is LOW ({score}/100). Stay safe!", token)
+            header = "✅ Message Scanned.\n\n"
+            await send_telegram_reply(chat_id, header + structured_text, token)
 
     except Exception as e:
         logger.error("telegram_handle_error", error=str(e))

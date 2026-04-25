@@ -19,11 +19,7 @@
   let ticker;
   onMount(() => {
     stopPolling = startPolling((d, e) => {
-      if (d.length)
-        alerts = [
-          ...alerts,
-          ...d.filter((x) => !alerts.find((a) => a.txn_id === x.txn_id)),
-        ];
+      if (d) alerts = d;
       error = e;
     });
     ticker = setInterval(() => {
@@ -93,22 +89,24 @@
 
   <div class="stats">
     <div class="stat-card">
+      <div class="stat-icon">📡</div>
+      <span class="stat-n" style="font-size: 1rem; color: {backendOnline ? '#10B981' : '#EF4444'}">
+        {backendOnline ? 'LIVE' : 'OFFLINE'}
+      </span>
+      <span class="stat-l">Backend</span>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🕒</div>
+      <span class="stat-n" style="font-size: 0.9rem">{new Date(now).toLocaleTimeString()}</span>
+      <span class="stat-l">Clock</span>
+    </div>
+    <div class="stat-card">
       <div class="stat-icon">📊</div>
-      <span class="stat-n">{alerts.length}</span><span class="stat-l"
-        >Total Alerts</span
-      >
+      <span class="stat-n">{alerts.length}</span><span class="stat-l">Total</span>
     </div>
     <div class="stat-card warn">
       <div class="stat-icon">🚨</div>
-      <span class="stat-n">{pendingAlerts.length}</span><span class="stat-l"
-        >Pending</span
-      >
-    </div>
-    <div class="stat-card ok">
-      <div class="stat-icon">✅</div>
-      <span class="stat-n">{resolvedAlerts.length}</span><span class="stat-l"
-        >Resolved</span
-      >
+      <span class="stat-n">{pendingAlerts.length}</span><span class="stat-l">Pending</span>
     </div>
   </div>
   {#if pendingAlerts.length === 0 && resolvedAlerts.length === 0}
