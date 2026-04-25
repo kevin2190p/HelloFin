@@ -50,15 +50,15 @@ FAKEOUT is a mobile application designed to protect Malaysians from elder fraud 
 
 ## Screenshots
 
-![Screenshot 1](https://github.com/YOUR_USERNAME/fakeout/releases/download/v1.0-images/FK1.jpeg)
+![Screenshot 1](https://drive.google.com/file/d/1wxcQoGzXgIAgf3U5DbZbIgC0lqee27Pn/view?usp=sharing)
 
-![Screenshot 2](https://github.com/YOUR_USERNAME/fakeout/releases/download/v1.0-images/FK2.jpeg)
+![Screenshot 2](https://drive.google.com/file/d/1dm1afJ38XWoURnaBCzB7sTDH9p9D49m4/view?usp=sharing)
 
-![Screenshot 3](https://github.com/YOUR_USERNAME/fakeout/releases/download/v1.0-images/FK3.jpeg)
+![Screenshot 3](https://drive.google.com/file/d/1SLcYfbup_vPl4WH8cFQSiNqcnOKRKdcS/view?usp=sharing)
 
-![Screenshot 4](https://github.com/YOUR_USERNAME/fakeout/releases/download/v1.0-images/FK4.jpeg)
+![Screenshot 4](https://drive.google.com/file/d/1HfuY42gvqI0Q2agH-xiItMwmO5iirikN/view?usp=sharing)
 
-![Screenshot 5](https://github.com/YOUR_USERNAME/fakeout/releases/download/v1.0-images/FK5.jpeg)
+![Screenshot 5](https://drive.google.com/file/d/1X_BQGtnBvoMyArsEIPFeJq8jPAyftjwQ/view?usp=sharing)
 
 
 ## Videos
