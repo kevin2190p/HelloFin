@@ -13,7 +13,26 @@
   let actionResult = {};
   let demoMode = false;
   let activeTab = 'dashboard'; // 'dashboard' | 'whatsapp'
+  let injectText = '';
+  let injectLoading = false;
+  let injectResult = null;
 
+  async function injectMessage() {
+    if (!injectText.trim()) return;
+    injectLoading = true;
+    injectResult = null;
+    try {
+      const res = await fetch('http://localhost:8000/chat/inject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender_phone: '60163569782', text: injectText, message_type: 'text' }),
+      });
+      injectResult = await res.json();
+    } catch (e) {
+      injectResult = { risk_score: 0, status: 'error' };
+    }
+    injectLoading = false;
+  }
 
   // Tick every second for countdown timers
   let ticker;
@@ -168,7 +187,18 @@
         </div>
 
         <h2 class="section-title" style="margin-top:24px">🧪 Inject Test Message</h2>
-        <InjectPanel />
+        <div class="inject-panel">
+          <textarea class="inject-input" bind:value={injectText} placeholder="Paste a scam message here to test the AI…"></textarea>
+          <button class="inject-btn" on:click={injectMessage} disabled={injectLoading}>
+            {injectLoading ? '⏳ Analyzing...' : '🚀 Send to AI Engine'}
+          </button>
+          {#if injectResult}
+            <div class="inject-result" class:inject-scam={injectResult.risk_score >= 80}>
+              <span class="inject-score">{injectResult.risk_score}/100</span>
+              <span>{injectResult.status === 'held' ? '🚨 SCAM DETECTED' : '✅ SAFE'}</span>
+            </div>
+          {/if}
+        </div>
       </div>
     </section>
   {/if}
@@ -307,11 +337,7 @@
   {/if}
 </main>
 
-<script context="module">
-</script>
 
-<!-- Inline InjectPanel component -->
-<svelte:component this={null} />
 
 <style>
   /* ═══════════════════════════════════════════════
@@ -578,197 +604,34 @@
     .action-buttons { flex-direction: column; }
     h1 { font-size: 1.3rem; }
   }
-</style>
 
-
-  /* ── Animated BG ── */
-  .bg-grid {
-    position: fixed; inset: 0; z-index: 0;
-    background-image:
-      linear-gradient(rgba(99,102,241,.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(99,102,241,.04) 1px, transparent 1px);
-    background-size: 48px 48px;
+  /* ── Inject Panel ── */
+  .inject-panel { margin-top: 8px; }
+  .inject-input {
+    width: 100%; min-height: 80px; padding: 12px; border-radius: 12px;
+    background: rgba(30,41,59,.8); border: 1px solid rgba(99,102,241,.15);
+    color: #e2e8f0; font-size: .82rem; font-family: inherit; resize: vertical;
   }
-  .bg-glow {
-    position: fixed; border-radius: 50%; filter: blur(120px); z-index: 0; pointer-events: none;
+  .inject-input:focus { outline: none; border-color: rgba(99,102,241,.4); }
+  .inject-input::placeholder { color: #4a5568; }
+  .inject-btn {
+    margin-top: 10px; width: 100%; padding: 10px; border-radius: 12px;
+    background: linear-gradient(135deg, #6EE7B7, #3B82F6); color: #0a0e1a;
+    font-weight: 700; font-size: .82rem; border: none; cursor: pointer;
+    transition: all .2s;
   }
-  .glow-1 { width: 500px; height: 500px; top: -100px; right: -100px; background: rgba(59,130,246,.12); animation: drift 20s ease-in-out infinite; }
-  .glow-2 { width: 400px; height: 400px; bottom: -80px; left: -80px; background: rgba(16,185,129,.1); animation: drift 25s ease-in-out infinite reverse; }
-  @keyframes drift { 0%,100%{transform:translate(0,0)} 50%{transform:translate(40px,30px)} }
-
-  main { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
-
-  /* ── Header ── */
-  header {
-    padding: 24px 0;
-    border-bottom: 1px solid rgba(99,102,241,.15);
-    margin-bottom: 32px;
-  }
-  .header-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
-  .logo-group { display: flex; align-items: center; gap: 14px; }
-  .logo-icon svg { width: 44px; height: 44px; }
-  h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -.02em; color: #f1f5f9; }
-  .accent { background: linear-gradient(135deg, #6EE7B7, #3B82F6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .subtitle { font-size: .8rem; color: #64748b; margin-top: 2px; letter-spacing: .03em; }
-  .status-group { display: flex; align-items: center; gap: 12px; }
-  .status-badge {
-    display: flex; align-items: center; gap: 8px;
-    padding: 6px 14px; border-radius: 20px; font-size: .78rem; font-weight: 600;
-    background: rgba(30,41,59,.7); border: 1px solid rgba(99,102,241,.2);
-  }
-  .dot { width: 8px; height: 8px; border-radius: 50%; }
-  .online .dot { background: #34d399; box-shadow: 0 0 8px #34d399; }
-  .offline .dot { background: #f87171; }
-  .live-badge {
-    display: flex; align-items: center; gap: 6px;
-    padding: 5px 12px; border-radius: 20px; font-size: .7rem; font-weight: 700;
-    background: rgba(239,68,68,.15); color: #f87171; border: 1px solid rgba(239,68,68,.3);
-    letter-spacing: .08em;
-  }
-  .pulse-dot {
-    width: 7px; height: 7px; border-radius: 50%; background: #ef4444;
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.8)} }
-
-  /* ── Stats Bar ── */
-  .stats-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
-  .stat-card {
-    background: rgba(30,41,59,.6); border: 1px solid rgba(99,102,241,.12);
-    border-radius: 16px; padding: 20px 24px; text-align: center;
-    backdrop-filter: blur(12px);
-    transition: transform .2s, border-color .2s;
-  }
-  .stat-card:hover { transform: translateY(-2px); border-color: rgba(99,102,241,.3); }
-  .critical-bg { border-color: rgba(239,68,68,.25); background: rgba(239,68,68,.06); }
-  .safe-bg { border-color: rgba(52,211,153,.25); background: rgba(52,211,153,.06); }
-  .stat-value { display: block; font-size: 2.2rem; font-weight: 800; }
-  .critical-bg .stat-value { color: #f87171; }
-  .safe-bg .stat-value { color: #34d399; }
-  .stat-label { font-size: .78rem; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; }
-
-  /* ── Section ── */
-  .section-title {
+  .inject-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(110,231,183,.3); }
+  .inject-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .inject-result {
+    margin-top: 10px; padding: 10px 14px; border-radius: 10px;
     display: flex; align-items: center; gap: 10px;
-    font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; color: #f1f5f9;
+    background: rgba(52,211,153,.1); border: 1px solid rgba(52,211,153,.3);
+    font-size: .82rem; font-weight: 600; color: #34d399;
   }
-  .badge-count {
-    background: rgba(239,68,68,.2); color: #f87171; font-size: .75rem;
-    padding: 2px 10px; border-radius: 12px; font-weight: 700;
+  .inject-result.inject-scam {
+    background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.4); color: #f87171;
   }
-
-  /* ── Error ── */
-  .error-banner {
-    background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);
-    border-radius: 12px; padding: 14px 20px; margin-bottom: 24px;
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .error-sub { font-size: .75rem; color: #94a3b8; }
-
-  /* ── Empty ── */
-  .empty-state {
-    text-align: center; padding: 60px 20px;
-    background: rgba(30,41,59,.4); border-radius: 20px;
-    border: 1px dashed rgba(99,102,241,.2);
-  }
-  .empty-icon { font-size: 3rem; margin-bottom: 12px; }
-
-  /* ── Alerts Grid ── */
-  .alerts-grid { display: grid; gap: 20px; }
-  .alert-card {
-    display: flex; gap: 24px; align-items: flex-start;
-    background: rgba(30,41,59,.65); border: 1px solid rgba(99,102,241,.12);
-    border-radius: 20px; padding: 28px;
-    backdrop-filter: blur(16px);
-    transition: transform .25s, box-shadow .25s;
-    animation: slideIn .4s ease-out;
-  }
-  .alert-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,.3); }
-  .alert-card.critical { border-color: rgba(239,68,68,.3); background: rgba(239,68,68,.04); }
-  .alert-card.warning { border-color: rgba(251,191,36,.3); background: rgba(251,191,36,.04); }
-  @keyframes slideIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-
-  /* ── Risk Ring ── */
-  .risk-ring-wrap { position: relative; flex-shrink: 0; width: 80px; height: 80px; }
-  .risk-ring { width: 80px; height: 80px; transform: rotate(-90deg); }
-  .ring-bg { fill: none; stroke: rgba(99,102,241,.1); stroke-width: 6; }
-  .ring-fill { fill: none; stroke-width: 6; stroke-linecap: round; transition: stroke-dasharray .8s ease; }
-  .ring-fill.critical { stroke: #ef4444; }
-  .ring-fill.warning { stroke: #fbbf24; }
-  .ring-fill.safe { stroke: #34d399; }
-  .ring-text {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    font-size: 1.4rem; font-weight: 800;
-  }
-
-  /* ── Alert Details ── */
-  .alert-details { flex: 1; min-width: 0; }
-  .alert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
-  .risk-tag {
-    padding: 4px 12px; border-radius: 8px; font-size: .72rem; font-weight: 700;
-    letter-spacing: .04em; text-transform: uppercase;
-  }
-  .risk-tag.critical { background: rgba(239,68,68,.15); color: #f87171; }
-  .risk-tag.warning { background: rgba(251,191,36,.15); color: #fbbf24; }
-  .timer { font-size: .85rem; font-weight: 600; font-variant-numeric: tabular-nums; color: #94a3b8; }
-  .timer.expired { color: #f87171; animation: pulse 1s infinite; }
-  .detail-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(99,102,241,.06); font-size: .85rem; }
-  .label { color: #64748b; font-weight: 500; }
-  .value { color: #cbd5e1; }
-  .mono { font-family: 'JetBrains Mono', monospace; font-size: .8rem; }
-  .amount { color: #fbbf24; font-weight: 700; }
-  .reason { font-size: .78rem; color: #f87171; max-width: 300px; text-align: right; }
-
-  /* ── Action Buttons ── */
-  .action-buttons { display: flex; gap: 10px; margin-top: 16px; }
-  .btn {
-    flex: 1; padding: 10px 16px; border: none; border-radius: 12px;
-    font-size: .82rem; font-weight: 700; cursor: pointer;
-    transition: all .2s; letter-spacing: .02em;
-  }
-  .btn:disabled { opacity: .5; cursor: not-allowed; }
-  .btn-cancel {
-    background: rgba(239,68,68,.12); color: #f87171; border: 1px solid rgba(239,68,68,.3);
-  }
-  .btn-cancel:hover:not(:disabled) { background: rgba(239,68,68,.25); transform: translateY(-1px); }
-  .btn-approve {
-    background: rgba(52,211,153,.12); color: #34d399; border: 1px solid rgba(52,211,153,.3);
-  }
-  .btn-approve:hover:not(:disabled) { background: rgba(52,211,153,.25); transform: translateY(-1px); }
-
-  .action-result {
-    margin-top: 10px; padding: 8px 14px; border-radius: 8px; font-size: .78rem; font-weight: 500;
-  }
-  .action-result.success { background: rgba(52,211,153,.1); color: #34d399; }
-  .action-result.error { background: rgba(239,68,68,.1); color: #f87171; }
-
-  /* ── Resolved ── */
-  .resolved-section { margin-top: 40px; opacity: .8; }
-  .resolved-list { display: flex; flex-direction: column; gap: 8px; }
-  .resolved-row {
-    display: flex; align-items: center; gap: 20px;
-    padding: 12px 20px; border-radius: 12px;
-    background: rgba(30,41,59,.4); font-size: .82rem;
-    border: 1px solid rgba(99,102,241,.08);
-  }
-  .resolved-status { font-weight: 700; text-transform: uppercase; font-size: .72rem; min-width: 100px; }
-  .resolved-status.approved { color: #34d399; }
-  .resolved-status.cancelled { color: #f87171; }
-
-  /* ── Footer ── */
-  footer {
-    text-align: center; padding: 40px 0 20px;
-    color: #475569; font-size: .75rem; letter-spacing: .04em;
-  }
-
-  /* ── Responsive ── */
-  @media (max-width: 768px) {
-    .stats-bar { grid-template-columns: 1fr; }
-    .alert-card { flex-direction: column; align-items: center; text-align: center; }
-    .alert-header { justify-content: center; }
-    .detail-row { flex-direction: column; gap: 2px; }
-    .reason { max-width: 100%; text-align: center; }
-    .action-buttons { flex-direction: column; }
-    h1 { font-size: 1.3rem; }
-  }
+  .inject-score { font-size: 1.2rem; font-weight: 800; }
 </style>
+
+
