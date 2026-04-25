@@ -63,6 +63,7 @@ Services will be available at:
 2. Go to Workflows → Import from File
 3. Select `n8n/voice_phishing_workflow.json`
 4. Configure WhatsApp credentials in n8n
+5. Optional: import `n8n/telegram_integration_workflow.json` for Telegram-based alerts and configure the Telegram bot credential
 
 ## 📁 Project Structure
 
@@ -113,6 +114,7 @@ HelloFin/
 | AWS | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | IAM Console (Lambda/S3) |
 | Alibaba | `ALIBABA_ACCESS_KEY_ID`, `ALIBABA_ACCESS_KEY_SECRET` | RAM Console (OSS/KMS) |
 | TNG | `TNG_MINI_PROGRAM_APP_ID`, `TNG_MINI_PROGRAM_APP_SECRET` | [miniprogram.tngdigital.com.my](https://miniprogram.tngdigital.com.my) |
+| Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_PUSH_CHAT_ID` | Telegram BotFather + your caregiver chat/group ID |
 
 ## 🔒 Security (Bank-Grade / SOC2 Ready)
 

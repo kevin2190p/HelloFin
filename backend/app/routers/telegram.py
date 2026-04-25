@@ -18,6 +18,81 @@ AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 TELEGRAM_API_URL = "https://api.telegram.org/bot"
 
+
+def _clean_token(token: str) -> str:
+    return token.strip().replace("\n", "").replace("\r", "")
+
+
+def _risk_factor_label(risk_factors: list[dict]) -> str:
+    if not risk_factors:
+        return "Analysis"
+
+    first_factor = risk_factors[0] or {}
+    label = first_factor.get("category") or first_factor.get("factor") or "Analysis"
+    return str(label).replace("_", " ").title()
+
+
+def _build_analysis_payload(chat_id: int, content: str, result) -> dict:
+    score = result.risk_score
+    label = _risk_factor_label(result.risk_factors)
+    structured_text = (
+        f"🧾 HelloFin Analysis Result\n\n"
+        f"Input:\n{content}\n\n"
+        f"📊 Status: Processed Successfully\n\n"
+        f"--- AI VERDICT ---\n"
+        f"Risk Score: {score}/100\n"
+        f"Type: {label}\n\n"
+        f"This has been logged to your dashboard."
+    )
+    high_risk = score >= 50
+    header = "🚨 HelloFin RISK ALERT!\n\n" if high_risk else "✅ Message Scanned.\n\n"
+
+    return {
+        "chat_id": chat_id,
+        "txn_id": result.txn_id,
+        "transcript": result.transcript,
+        "translation": result.translation,
+        "risk_score": score,
+        "risk_factors": result.risk_factors,
+        "status": result.status,
+        "risk_level": "HIGH" if high_risk else "LOW",
+        "analysis_text": structured_text,
+        "reply_text": header + structured_text,
+    }
+
+
+async def _send_telegram_message(chat_id: str, text: str, bot_token: str):
+    clean_token = _clean_token(bot_token)
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{TELEGRAM_API_URL}{clean_token}/sendMessage",
+            json={"chat_id": chat_id, "text": text},
+        )
+        resp.raise_for_status()
+
+
+async def _notify_caregiver_push(content: str, sender_phone: str, result, token: str):
+    push_chat_id = os.getenv("TELEGRAM_PUSH_CHAT_ID", "").strip()
+    if not push_chat_id or not _clean_token(token):
+        return
+
+    threshold = int(os.getenv("TELEGRAM_PUSH_THRESHOLD", "50"))
+    if result.risk_score < threshold:
+        return
+
+    summary = (
+        f"🚨 HelloFin Push Notification\n\n"
+        f"Risk Score: {result.risk_score}/100\n"
+        f"Type: {_risk_factor_label(result.risk_factors)}\n"
+        f"Sender: {sender_phone}\n\n"
+        f"{content[:350]}"
+    )
+
+    try:
+        await _send_telegram_message(push_chat_id, summary, token)
+    except Exception as e:
+        logger.error("telegram_push_failed", error=str(e))
+
 async def download_telegram_file(file_id: str, bot_token: str) -> str:
     """Download a file from Telegram and return the local path."""
     async with httpx.AsyncClient() as client:
@@ -52,10 +127,48 @@ async def telegram_webhook(request: Request):
     return {"status": "ok"}
 
 
+@router.post("/analyze")
+async def telegram_analyze(request: Request):
+    """n8n-facing Telegram analysis endpoint."""
+    payload = await request.json()
+    return await analyze_telegram_payload(payload, request.app)
+
+
+async def analyze_telegram_payload(payload: dict, app) -> dict:
+    redis = app.state.redis
+    chat_id = payload.get("chat_id") or payload.get("sender_chat_id") or payload.get("message", {}).get("chat", {}).get("id")
+    if not chat_id:
+        raise HTTPException(status_code=400, detail="chat_id is required")
+
+    text = payload.get("text") or payload.get("message", {}).get("text") or payload.get("message", {}).get("caption")
+    transcript = payload.get("transcript") or text
+    if not transcript:
+        raise HTTPException(status_code=400, detail="text or transcript is required")
+
+    sender_phone = payload.get("sender_phone") or f"tg_{chat_id}"
+    transaction_amount = float(payload.get("transaction_amount", 0.0) or 0.0)
+    is_new_payee = bool(payload.get("is_new_payee", False))
+    message_type = payload.get("message_type") or "telegram_text"
+
+    result = await process_message(
+        redis=redis,
+        transcript=transcript,
+        sender_phone=sender_phone,
+        is_new_payee=is_new_payee,
+        transaction_amount=transaction_amount,
+        message_type=message_type,
+    )
+
+    await _notify_caregiver_push(transcript, sender_phone, result, os.getenv("TELEGRAM_BOT_TOKEN", ""))
+    response = _build_analysis_payload(chat_id, transcript, result)
+    response["bot_token_configured"] = bool(_clean_token(os.getenv("TELEGRAM_BOT_TOKEN", "")))
+    return response
+
+
 async def handle_telegram_update(update: dict, app):
     """Shared logic for both webhook and polling."""
     raw_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
-    token = raw_token.strip().replace("\n", "").replace("\r", "")
+    token = _clean_token(raw_token)
     
     if not token or "REPLACE" in token:
         logger.error("telegram_handle_error", detail="TELEGRAM_BOT_TOKEN is missing or invalid in .env")
@@ -109,25 +222,9 @@ async def handle_telegram_update(update: dict, app):
             return
 
         msg_content = transcript if voice else text
-        score = result.risk_score
-        
-        # Build the structured output exactly as requested
-        structured_text = (
-            f"🧾 HelloFin Analysis Result\n\n"
-            f"Input:\n{msg_content}\n\n"
-            f"📊 Status: Processed Successfully\n\n"
-            f"--- AI VERDICT ---\n"
-            f"Risk Score: {score}/100\n"
-            f"Type: {result.risk_factors[0]['category'].replace('_', ' ').title() if result.risk_factors else 'Analysis'}\n\n"
-            f"This has been logged to your dashboard."
-        )
-
-        if score >= 50:
-            header = "🚨 HelloFin RISK ALERT!\n\n"
-            await send_telegram_reply(chat_id, header + structured_text, token)
-        else:
-            header = "✅ Message Scanned.\n\n"
-            await send_telegram_reply(chat_id, header + structured_text, token)
+        response = _build_analysis_payload(chat_id, msg_content, result)
+        await _notify_caregiver_push(msg_content, f"tg_{chat_id}", result, token)
+        await send_telegram_reply(chat_id, response["reply_text"], token)
 
     except Exception as e:
         logger.error("telegram_handle_error", error=str(e))
@@ -214,7 +311,7 @@ async def send_telegram_reply(chat_id: int, text: str, bot_token: str):
                 json={"chat_id": chat_id, "text": text}
             )
             if resp.status_code != 200:
-                print(f"[DEBUG] Telegram Reply FAILED: {resp.status_code} - {resp.text}")
+                print(f"[DEBUG] ❌ Telegram Reply FAILED: {resp.status_code} - {resp.text}")
             resp.raise_for_status()
         except Exception as e:
             logger.error("telegram_reply_failed", error=str(e))
