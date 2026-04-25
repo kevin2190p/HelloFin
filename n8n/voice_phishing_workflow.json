@@ -19,7 +19,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Extract data from OpenClaw webhook\nconst item = $input.first().json;\nconst body = item.body || item;\n\nconst messageType = body.message_type || 'unknown';\nconst sender = body.sender_phone || 'unknown';\nconst timestamp = body.timestamp || Date.now().toString();\nconst pushName = body.push_name || 'Unknown';\nconst text = body.text || '';\nconst duration = body.duration || 0;\n\n// Check if this is a voice note (has binary data)\nconst hasBinary = Object.keys($input.first().binary || {}).length > 0;\n\nconsole.log(`[HelloFin] Message from +${sender} (${pushName})`);\nconsole.log(`[HelloFin] Type: ${messageType}, Has Audio: ${hasBinary}`);\n\nreturn [{\n  json: {\n    message_type: messageType,\n    sender_phone: sender,\n    timestamp,\n    push_name: pushName,\n    text,\n    duration,\n    has_audio: hasBinary\n  },\n  binary: $input.first().binary\n}];"
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nconst messageType = body.message_type || 'unknown';\nconst sender = String(body.sender_phone || 'unknown');\nconst timestamp = body.timestamp || String(Date.now());\nconst pushName = body.push_name || 'Unknown';\nconst text = body.text || '';\nconst duration = parseInt(body.duration || '0');\n\n// Check if binary audio data came through\nconst binaryKeys = Object.keys($input.first().binary || {});\nconst hasBinary = binaryKeys.length > 0;\n\nconsole.log(`[HelloFin] 🚨 Intercepted from +${sender} (${pushName})`);\nconsole.log(`[HelloFin] Type: ${messageType} | Audio: ${hasBinary} | Text: \"${text.substring(0,60)}\"`);\n\nreturn [{\n  json: { message_type: messageType, sender_phone: sender, timestamp, push_name: pushName, text, duration, has_audio: hasBinary },\n  binary: $input.first().binary\n}];"
       },
       "id": "n2-extract",
       "name": "Extract Message",
@@ -33,20 +33,12 @@
           "options": { "caseSensitive": false },
           "combinator": "or",
           "conditions": [
-            {
-              "leftValue": "={{ $json.message_type }}",
-              "rightValue": "voice",
-              "operator": { "type": "string", "operation": "equals" }
-            },
-            {
-              "leftValue": "={{ $json.has_audio }}",
-              "rightValue": true,
-              "operator": { "type": "boolean", "operation": "equals" }
-            }
+            { "leftValue": "={{ $json.message_type }}", "rightValue": "voice", "operator": { "type": "string", "operation": "equals" } },
+            { "leftValue": "={{ $json.has_audio }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }
           ]
         }
       },
-      "id": "n3-check-type",
+      "id": "n3-route",
       "name": "Voice or Text?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
@@ -60,37 +52,19 @@
         "contentType": "multipart-form-data",
         "bodyParameters": {
           "parameters": [
-            {
-              "parameterType": "formBinaryData",
-              "name": "audio",
-              "inputDataFieldName": "data"
-            },
-            {
-              "parameterType": "formData",
-              "name": "sender_phone",
-              "value": "={{ $json.sender_phone }}"
-            },
-            {
-              "parameterType": "formData",
-              "name": "is_new_payee",
-              "value": "false"
-            },
-            {
-              "parameterType": "formData",
-              "name": "transaction_amount",
-              "value": "0"
-            }
+            { "parameterType": "formBinaryData", "name": "audio", "inputDataFieldName": "data" },
+            { "parameterType": "formData", "name": "sender_phone", "value": "={{ $json.sender_phone }}" },
+            { "parameterType": "formData", "name": "is_new_payee", "value": "false" },
+            { "parameterType": "formData", "name": "transaction_amount", "value": "0" }
           ]
         },
-        "options": {
-          "timeout": 120000
-        }
+        "options": { "timeout": 120000 }
       },
-      "id": "n4-forward-voice",
-      "name": "Forward Voice to Jane",
+      "id": "n4-voice-to-jane",
+      "name": "Voice → Groq Whisper + Qwen3 (Jane)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, 240],
+      "position": [880, 200],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 2000
@@ -98,41 +72,46 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:8000/risk/score",
+        "url": "http://localhost:8000/webhook/whatsapp-text",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"transcript\": \"{{ $json.text }}\",\n  \"caller_number\": \"{{ $json.sender_phone }}\",\n  \"is_new_payee\": false,\n  \"transaction_amount\": 0\n}",
-        "options": {
-          "timeout": 30000
-        }
+        "jsonBody": "={ \"sender_phone\": \"{{ $json.sender_phone }}\", \"text\": \"{{ $json.text }}\", \"push_name\": \"{{ $json.push_name }}\", \"is_new_payee\": false, \"transaction_amount\": 0 }",
+        "options": { "timeout": 30000 }
       },
-      "id": "n5-forward-text",
-      "name": "Score Text via Jane",
+      "id": "n5-text-to-jane",
+      "name": "Text → Qwen3 Analysis (Jane)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, 460],
+      "position": [880, 480],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 2000
     },
     {
       "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Merge results from voice or text path\nconst data = $input.first().json;\nconst riskScore = data.risk_score || 0;\nconst status = data.status || 'cleared';\nconst txnId = data.txn_id || 'unknown';\n\nconsole.log(`[HelloFin] ✅ Risk Score: ${riskScore} | Status: ${status} | TXN: ${txnId}`);\n\nreturn [{ json: { ...data, risk_score: riskScore, status, txn_id: txnId } }];"
+      },
+      "id": "n6-merge",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 340]
+    },
+    {
+      "parameters": {
         "conditions": {
           "combinator": "and",
           "conditions": [
-            {
-              "leftValue": "={{ $json.risk_score }}",
-              "rightValue": 80,
-              "operator": { "type": "number", "operation": "gte" }
-            }
+            { "leftValue": "={{ $json.risk_score }}", "rightValue": 80, "operator": { "type": "number", "operation": "gte" } }
           ]
         }
       },
-      "id": "n6-risk-check",
-      "name": "High Risk?",
+      "id": "n7-risk-gate",
+      "name": "High Risk (≥80)?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1100, 340]
+      "position": [1300, 340]
     },
     {
       "parameters": {
@@ -140,47 +119,40 @@
         "url": "http://localhost:8000/tng/hold",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"txn_id\": \"{{ $json.txn_id || $json.request_id || 'txn-' + Date.now() }}\",\n  \"risk_score\": {{ $json.risk_score }},\n  \"sender_phone\": \"{{ $json.sender_phone || 'unknown' }}\",\n  \"transaction_amount\": 0,\n  \"reason\": \"Voice phishing detected by OpenClaw + n8n\"\n}",
+        "jsonBody": "={ \"txn_id\": \"{{ $json.txn_id }}\", \"risk_score\": {{ $json.risk_score }}, \"sender_phone\": \"{{ $json.sender_phone }}\", \"transaction_amount\": 0, \"reason\": \"{{ $json.risk_factors[0].description || 'Voice phishing detected' }}\" }",
         "options": {}
       },
-      "id": "n7-hold",
-      "name": "Trigger Hold (Shawn)",
+      "id": "n8-hold",
+      "name": "🛑 Trigger Hold (Shawn)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, 240]
+      "position": [1500, 200]
     },
     {
       "parameters": {},
-      "id": "n8-low-risk",
-      "name": "Low Risk (Pass)",
+      "id": "n9-pass",
+      "name": "✅ Low Risk – Pass",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1320, 460]
+      "position": [1500, 480]
     }
   ],
   "connections": {
-    "OpenClaw Webhook": {
-      "main": [[{ "node": "Extract Message", "type": "main", "index": 0 }]]
-    },
-    "Extract Message": {
-      "main": [[{ "node": "Voice or Text?", "type": "main", "index": 0 }]]
-    },
+    "OpenClaw Webhook": { "main": [[{ "node": "Extract Message", "type": "main", "index": 0 }]] },
+    "Extract Message": { "main": [[{ "node": "Voice or Text?", "type": "main", "index": 0 }]] },
     "Voice or Text?": {
       "main": [
-        [{ "node": "Forward Voice to Jane", "type": "main", "index": 0 }],
-        [{ "node": "Score Text via Jane", "type": "main", "index": 0 }]
+        [{ "node": "Voice → Groq Whisper + Qwen3 (Jane)", "type": "main", "index": 0 }],
+        [{ "node": "Text → Qwen3 Analysis (Jane)", "type": "main", "index": 0 }]
       ]
     },
-    "Forward Voice to Jane": {
-      "main": [[{ "node": "High Risk?", "type": "main", "index": 0 }]]
-    },
-    "Score Text via Jane": {
-      "main": [[{ "node": "High Risk?", "type": "main", "index": 0 }]]
-    },
-    "High Risk?": {
+    "Voice → Groq Whisper + Qwen3 (Jane)": { "main": [[{ "node": "Log Result", "type": "main", "index": 0 }]] },
+    "Text → Qwen3 Analysis (Jane)": { "main": [[{ "node": "Log Result", "type": "main", "index": 0 }]] },
+    "Log Result": { "main": [[{ "node": "High Risk (≥80)?", "type": "main", "index": 0 }]] },
+    "High Risk (≥80)?": {
       "main": [
-        [{ "node": "Trigger Hold (Shawn)", "type": "main", "index": 0 }],
-        [{ "node": "Low Risk (Pass)", "type": "main", "index": 0 }]
+        [{ "node": "🛑 Trigger Hold (Shawn)", "type": "main", "index": 0 }],
+        [{ "node": "✅ Low Risk – Pass", "type": "main", "index": 0 }]
       ]
     }
   },
