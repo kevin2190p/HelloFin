@@ -3,7 +3,7 @@
  * Communicates with the FastAPI backend for caregiver operations.
  */
 
-const BASE_URL = 'http://127.0.0.1:8000';
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 
 export async function detectBackend() {
   return BASE_URL;
@@ -52,4 +52,17 @@ export async function scoreRisk(payload) {
 /** Health check */
 export async function healthCheck() {
   return request('/health');
+}
+
+/** Fetch chat monitor messages */
+export async function fetchChatMessages(limit = 20) {
+  return request(`/chat/messages?limit=${limit}`);
+}
+
+/** Inject a demo message into the detection pipeline */
+export async function injectChatMessage(payload) {
+  return request('/chat/inject', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }

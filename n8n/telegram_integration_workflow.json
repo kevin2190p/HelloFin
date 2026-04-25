@@ -1,0 +1,119 @@
+{
+  "name": "HelloFin – Telegram Scam Guard",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"]
+      },
+      "id": "n1-telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [200, 320]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const update = $input.first().json;\nconst message = update.message || update.edited_message || update.channel_post || {};\nconst chat = message.chat || {};\nconst text = message.text || message.caption || '';\nconst pushName = [chat.first_name, chat.last_name].filter(Boolean).join(' ') || chat.username || 'Telegram User';\n\nreturn [{\n  json: {\n    chat_id: chat.id,\n    sender_phone: String(chat.id || 'unknown'),\n    push_name: pushName,\n    text,\n    is_new_payee: false,\n    transaction_amount: 0,\n    message_type: 'telegram_text',\n    message_id: message.message_id\n  }\n}];"
+      },
+      "id": "n2-normalize",
+      "name": "Normalize Telegram Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/webhook/telegram/analyze",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"chat_id\": {{ $json.chat_id }}, \"sender_phone\": \"{{ $json.sender_phone }}\", \"push_name\": \"{{ $json.push_name }}\", \"text\": \"{{ $json.text }}\", \"is_new_payee\": false, \"transaction_amount\": 0, \"message_type\": \"telegram_text\" }",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "n3-backend-ai",
+      "name": "HTTP Request → Backend AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 320],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.risk_score }}",
+              "rightValue": 80,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ]
+        }
+      },
+      "id": "n4-risk-gate",
+      "name": "High Risk (≥80)?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 320]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ `🚨 High risk detected.\n\nScore: ${$json.risk_score}/100\nStatus: ${$json.status}\n\n${$json.analysis_text}` }}"
+      },
+      "id": "n5-high-risk-reply",
+      "name": "Reply High Risk",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1140, 180]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ `✅ Message checked.\n\nScore: ${$json.risk_score}/100\nStatus: ${$json.status}\n\n${$json.analysis_text}` }}"
+      },
+      "id": "n6-low-risk-reply",
+      "name": "Reply Low Risk",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1140, 460]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [[{ "node": "Normalize Telegram Message", "type": "main", "index": 0 }]]
+    },
+    "Normalize Telegram Message": {
+      "main": [[{ "node": "HTTP Request → Backend AI", "type": "main", "index": 0 }]]
+    },
+    "HTTP Request → Backend AI": {
+      "main": [[{ "node": "High Risk (≥80)?", "type": "main", "index": 0 }]]
+    },
+    "High Risk (≥80)?": {
+      "main": [
+        [{ "node": "Reply High Risk", "type": "main", "index": 0 }],
+        [{ "node": "Reply Low Risk", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "FINHACK2026"
+    },
+    {
+      "name": "Telegram"
+    }
+  ]
+}
