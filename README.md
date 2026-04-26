@@ -1,4 +1,4 @@
-# FAKEOUT
+# Fakeout
 
 **Protecting Everyone, Not Just Banks. Your Money Stays Safe.**
 
