@@ -6,38 +6,23 @@ FAKEOUT is a mobile application designed to protect Malaysians from elder fraud 
 
 ## Features
 
-**Detect scam calls and voice notes in real-time:**
-- AI-powered voice analysis using OpenAI Whisper for instant speech-to-text transcription.
-- Risk scoring algorithm that identifies scam keywords and urgency patterns.
-- Automatic flagging of suspicious transactions within seconds.
+**Real-time scam detection**  
+AI transcribes and detects scam patterns instantly.
 
-**Receive instant caregiver alerts via WhatsApp:**
-- Caregivers are notified immediately when suspicious activity is detected.
-- One-click approval or cancellation directly from WhatsApp.
-- Real-time dashboard for complete transaction overview.
+**Instant caregiver alerts**  
+WhatsApp notifications with one-tap approve or cancel.
 
-**Smart hold and auto-cancel protection:**
-- Suspicious transactions display "Processing" to trap scammers psychologically.
-- Money is held securely in Alibaba vault during verification window.
-- Auto-cancel after 60 minutes if user doesn't respond—money returns safely.
-- User maintains full control throughout the entire process.
+**Smart hold & auto-cancel**  
+Funds stay safe and auto-return if unverified.
 
-**Caregiver dashboard with real-time monitoring:**
-- View all flagged transactions with risk scores and detected keywords.
-- Approve or cancel transactions with a single click.
-- Monitor processing timers and auto-cancel countdowns.
-- Complete audit trail for compliance and record-keeping.
+**Caregiver dashboard**  
+Live risk view with actions and countdown timer.
 
-**Cross-cloud security and encryption:**
-- Alibaba OSS stores encrypted audio and real balance state.
-- AWS Lambda handles deception layer and risk trigger evaluation.
-- AES-256 encryption for all sensitive data.
-- No single point of failure—multi-cloud protection.
+**Multi-cloud security**  
+Separated systems ensure no single point of failure.
 
-**Fallback detection methods:**
-- Call duration analysis for calls without voice consent.
-- Unknown number detection and location pattern analysis.
-- Behavioral scoring from transaction history.
+**Fallback detection**  
+Uses call, number, and behavior signals when audio is unavailable.
 
 ## ⚙️ Technical Architecture
 
@@ -75,9 +60,6 @@ FAKEOUT is a mobile application designed to protect Malaysians from elder fraud 
 
 
 ## Videos
-
-**Contribution encouraged.** [Donate](https://ko-fi.com/webadderall/goal?g=0)
-
 
 <video width="640" height="480" controls>
   <source src="https://drive.google.com/uc?export=download&id=172RgwGpJBYTLuyjxyHXH4cWFEaST-mSN" type="video/mp4">
