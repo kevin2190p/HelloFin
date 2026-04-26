@@ -39,16 +39,29 @@ FAKEOUT is a mobile application designed to protect Malaysians from elder fraud 
 - Unknown number detection and location pattern analysis.
 - Behavioral scoring from transaction history.
 
-## Dependencies used
+## ⚙️ Technical Architecture
 
-- **Frontend**: Svelte, SvelteKit, Tailwind CSS, Chart.js
-- **Backend**: FastAPI, OpenAI Whisper, Claude AI
-- **Automation**: n8n, OpenClaw
-- **Cloud**: AWS Lambda, Alibaba OSS, Alibaba KMS
-- **Communications**: Meta WhatsApp API
-- **Database**: Firebase/PostgreSQL (configurable)
+### Core Stack
+- **Frontend**: Svelte, SvelteKit, Tailwind CSS, Chart.js  
+- **Backend**: FastAPI, Groq‑whisper‑large‑v3 (speech‑to‑text), Hugging Face API (risk detection)  
+- **Bot platform**: Telegram Bot API (access token)  
+- **Workflow / optional**: n8n (automation)
 
-## Screenshots
+### ☁️ AWS Integrations
+1. **AWS Bedrock** – Claude 3 Haiku scam analyzer  
+2. **AWS KMS** – primary Data Encryption Key generator  
+3. **AWS Lambda** – optional secondary scorer  
+
+### ☁️ Alibaba Cloud Integrations
+1. **Alibaba DashScope (Model Studio)** – Qwen‑Turbo scam analyzer  
+2. **Alibaba OSS** – encrypted Data Encryption Key vault  
+3. **Alibaba KMS** – second‑layer wrap of the DEK (via OSS‑SSE‑KMS)  
+
+### 📦 Other Dependencies
+- `Next.js (App Router)` frontend with React, TypeScript, Tailwind CSS, Framer Motion  
+- Next.js server API route as the backend fan‑out layer  
+- Firebase / PostgreSQL (configurable)  
+- Alibaba OSS (encrypted storage)  
 
 ![Screenshot 1](https://drive.google.com/uc?export=view&id=1wxcQoGzXgIAgf3U5DbZbIgC0lqee27Pn)
 
