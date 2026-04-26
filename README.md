@@ -46,7 +46,9 @@ Separates detection and fund control across AWS and Alibaba Cloud for resilience
 - `Next.js (App Router)` frontend with React, TypeScript, Tailwind CSS, Framer Motion  
 - Next.js server API route as the backend fan‑out layer  
 - Firebase / PostgreSQL (configurable)  
-- Alibaba OSS (encrypted storage)  
+- Alibaba OSS (encrypted storage)
+
+## Screenshots 
 
 ![Screenshot 1](https://drive.google.com/uc?export=view&id=1wxcQoGzXgIAgf3U5DbZbIgC0lqee27Pn)
 
