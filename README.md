@@ -7,22 +7,22 @@ FAKEOUT is a mobile application designed to protect Malaysians from elder fraud 
 ## Features
 
 **Real-time scam detection**  
-AI transcribes and detects scam patterns instantly.
+Analyzes Telegram messages (text + voice) and flags high-risk conversations instantly.
 
-**Instant caregiver alerts**  
-WhatsApp notifications with one-tap approve or cancel.
+**AI voice & text analysis**  
+Uses Whisper for speech-to-text and LLMs (Claude / Qwen) to detect scam patterns.
+
+**Instant caregiver / admin alerts**  
+Triggers alerts for suspicious activity with quick approve or cancel actions.
 
 **Smart hold & auto-cancel**  
-Funds stay safe and auto-return if unverified.
+Suspicious transactions are held and automatically cancelled if unverified.
 
 **Caregiver dashboard**  
-Live risk view with actions and countdown timer.
+Provides live monitoring with risk scores, reasons, and countdown timers.
 
-**Multi-cloud security**  
-Separated systems ensure no single point of failure.
-
-**Fallback detection**  
-Uses call, number, and behavior signals when audio is unavailable.
+**Multi-cloud security architecture**  
+Separates detection and fund control across AWS and Alibaba Cloud for resilience.
 
 ## ⚙️ Technical Architecture
 
