@@ -62,8 +62,6 @@ FAKEOUT is a mobile application designed to protect Malaysians from elder fraud 
 
 
 ## Videos
-### Create polished, pro-grade screen recordings.
-[Recordly](https://www.recordly.dev) is an **open-source screen recorder** and editor for **walkthroughs, demos, product videos**, and more. 
 
 **Contribution encouraged.** [Donate](https://ko-fi.com/webadderall/goal?g=0)
 
