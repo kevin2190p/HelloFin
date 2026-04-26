@@ -67,9 +67,21 @@ FAKEOUT is a mobile application designed to protect Malaysians from elder fraud 
 
 **Contribution encouraged.** [Donate](https://ko-fi.com/webadderall/goal?g=0)
 
-https://drive.google.com/file/d/172RgwGpJBYTLuyjxyHXH4cWFEaST-mSN
 
-https://drive.google.com/file/d/1PQ_k0TqhzEjqubqP4VbxVxYL1Fu2N50F
+<video width="640" height="480" controls>
+  <source src="https://drive.google.com/uc?export=download&id=172RgwGpJBYTLuyjxyHXH4cWFEaST-mSN" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+[Download Video 1](https://drive.google.com/uc?export=download&id=172RgwGpJBYTLuyjxyHXH4cWFEaST-mSN)
+
+
+<video width="640" height="480" controls>
+  <source src="https://drive.google.com/uc?export=download&id=1PQ_k0TqhzEjqubqP4VbxVxYL1Fu2N50F" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+[Download Video 2](https://drive.google.com/uc?export=download&id=1PQ_k0TqhzEjqubqP4VbxVxYL1Fu2N50F)
 
 ## License
 
