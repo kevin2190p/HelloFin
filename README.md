@@ -82,4 +82,4 @@ MIT License
 
 ## Closing
 
-Banks release your money to scammers. FAKEOUT gives it back to you.
+Banks release your money to scammers. Fakeout gives it back to you.
